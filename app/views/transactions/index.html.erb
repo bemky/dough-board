@@ -4,7 +4,7 @@
             Value
         </div>
         <div class="text-2x text-bold">
-            $<%= @portfolio.values.sum{|x| x[:value]} %>
+            <%= number_to_currency @portfolio.values.sum{|x| x[:value]} %>
         </div>
     </div>
     <div class="flex gap-xl">
@@ -17,7 +17,10 @@
                     </td>
                     <td><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
                     <td><%= transaction.asset.symbol %></td>
-                    <td><%= transaction.quantity %></td>
+                    <td>
+                        <%= transaction.quantity %>
+                        (<%= transaction.adjusted_quantity %>)
+                    </td>
                     <td><%= transaction.value %></td>
                     <td><%= transaction.vendor %></td>
                     <td><%= link_to "Edit", transaction %></td>

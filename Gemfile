@@ -21,6 +21,8 @@ gem 'condenser', github: 'malomalo/condenser'
 gem 'condenser-rails', github: 'malomalo/condenser-rails'
 gem 'uniform-ui', require: 'uniform', github: 'bemky/uniform'
 
+gem 'nokogiri'
+
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"
 

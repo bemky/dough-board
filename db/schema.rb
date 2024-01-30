@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_01_30_190231) do
+ActiveRecord::Schema[7.1].define(version: 2024_01_30_230345) do
   create_table "assets", force: :cascade do |t|
     t.string "name"
     t.string "symbol", null: false
@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_30_190231) do
     t.string "type"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "splits_updated_at"
   end
 
   create_table "quotes", force: :cascade do |t|
@@ -29,6 +30,15 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_30_190231) do
     t.index ["asset_id"], name: "index_quotes_on_asset_id"
   end
 
+  create_table "splits", force: :cascade do |t|
+    t.integer "asset_id"
+    t.float "ratio"
+    t.datetime "split_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["asset_id"], name: "index_splits_on_asset_id"
+  end
+
   create_table "transactions", force: :cascade do |t|
     t.integer "asset_id", null: false
     t.string "type", null: false
@@ -38,6 +48,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_30_190231) do
     t.float "value"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.float "adjusted_quantity"
     t.index ["asset_id"], name: "index_transactions_on_asset_id"
   end
 
