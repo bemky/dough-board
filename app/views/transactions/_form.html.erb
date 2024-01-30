@@ -1,0 +1,33 @@
+<%= form_for transaction do |f| %>
+    <%= hidden_field_tag "redirect_to", "/" %>
+    <div class="uniformInputs space-v">
+        <div class="">
+            <%= f.label :executed_at, class: 'block' %>
+            <%= f.date_field :executed_at %>
+        </div>
+        <div class="">
+            <%= f.label :symbol, class: 'block' %>
+            <%= f.text_field :symbol %>
+        </div>
+        <div class="">
+            <%= f.label :vendor, class: 'block' %>
+            <%= f.text_field :vendor %>
+        </div>
+        <div class="">
+            <%= f.label :type, class: 'block' %>
+            <%= f.select :type, %w(sale buy) %>
+        </div>
+        <div class="">
+            <%= f.label :quantity, class: 'block' %>
+            <%= f.number_field :quantity, step: '0.01' %>
+        </div>
+        <div class="">
+            <%= f.label :value, class: 'block' %>
+            <%= f.number_field :value, step: '0.01' %>
+        </div>
+        <button type="submit" class="uniformButton -green">
+            Add
+        </button>
+    </div>
+    
+<% end %>

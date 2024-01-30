@@ -1,0 +1,36 @@
+<div class="pad-2x space-v-2x">
+    <div class="">
+        <div class="text-bold text-uppercase">
+            Value
+        </div>
+        <div class="text-2x text-bold">
+            $<%= @portfolio.values.sum{|x| x[:value]} %>
+        </div>
+    </div>
+    <div class="flex gap-xl">
+        <div class="flex-fill">
+            <table class="uniformTable">
+            <% @transactions.each do |transaction| %>
+                <tr>
+                    <td>
+                        <span class="uniformLabel text-uppercase text-xs text-bold <%= transaction.type == "buy" ? "-green-60" : "-red" %>"><%= transaction.type %></span>
+                    </td>
+                    <td><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
+                    <td><%= transaction.asset.symbol %></td>
+                    <td><%= transaction.quantity %></td>
+                    <td><%= transaction.value %></td>
+                    <td><%= transaction.vendor %></td>
+                    <td><%= link_to "Edit", transaction %></td>
+                </tr>
+            <% end %>
+            </table>
+            <% if @transactions.length == 0 %>
+            No Transactions
+            <% end %>
+        </div>
+        <div class="rounded-xl bg-gray-10 pad-2x">
+            <h3 class="margin-bottom">Add Transaction</h3>
+            <%= render partial: 'transactions/form', locals: {transaction: Transaction.new} %>
+        </div>
+    </div>
+</div>

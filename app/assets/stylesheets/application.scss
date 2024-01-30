@@ -1,0 +1,5 @@
+@import 'uniform';
+
+body{
+  font-family: map-get($uniform_configs, 'base-font');
+}
