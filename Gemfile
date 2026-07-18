@@ -1,12 +1,16 @@
 source "https://rubygems.org"
 
-ruby "3.2.2"
+ruby "3.4.8"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.1.3"
+gem "rails", "~> 8.1.0"
 
 # Use sqlite3 as the database for Active Record
-gem "sqlite3", "~> 1.4"
+gem "sqlite3", ">= 2.1"
+
+# Required at load time by standardapi, which patches the PostgreSQL adapter
+# even though this app connects via sqlite3.
+gem "pg"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
@@ -14,12 +18,12 @@ gem "puma", ">= 5.0"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
-gem 'standardapi', require: 'standard_api', github: 'waratuman/standardapi'
+gem 'standardapi', require: 'standard_api', github: 'waratuman/standardapi', branch: 'master'
 
 gem 'sassc'
-gem 'condenser', github: 'malomalo/condenser'
-gem 'condenser-rails', github: 'malomalo/condenser-rails'
-gem 'uniform-ui', require: 'uniform', github: 'bemky/uniform'
+gem 'condenser', github: 'malomalo/condenser', branch: 'master'
+gem 'condenser-rails', github: 'malomalo/condenser-rails', branch: 'master'
+gem 'uniform-ui', require: 'uniform', github: 'bemky/uniform', branch: 'master'
 
 gem 'nokogiri'
 
