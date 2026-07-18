@@ -1,13 +1,10 @@
-module TransactionACL
+module AccountACL
 
   def attributes
     [
-      :executed_at,
-      :symbol,
-      :account_id,
-      :quantity,
-      :value,
-      :type
+      :name,
+      :number,
+      :provider
     ]
   end
 

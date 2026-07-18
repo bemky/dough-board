@@ -11,4 +11,5 @@ Rails.application.routes.draw do
   root "transactions#index"
   
   standard_resources :transactions
+  standard_resources :accounts
 end

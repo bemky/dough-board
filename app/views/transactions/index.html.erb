@@ -29,7 +29,7 @@
                             <span class="text-xs font-normal">Split Adjusted</span>
                         </th>
                         <th class="py-2 pr-4 font-semibold text-right">Value</th>
-                        <th class="py-2 pr-4 font-semibold">Vendor</th>
+                        <th class="py-2 pr-4 font-semibold">Account</th>
                         <th class="py-2 font-semibold"></th>
                     </tr>
                 </thead>
@@ -46,7 +46,7 @@
                             <span class="text-xs text-gray-500"><%= transaction.adjusted_quantity %></span>
                         </td>
                         <td class="py-2 pr-4 text-right"><%= number_to_currency transaction.value %></td>
-                        <td class="py-2 pr-4"><%= transaction.vendor %></td>
+                        <td class="py-2 pr-4"><%= transaction.account.label %></td>
                         <td class="py-2"><%= link_to "Edit", transaction, class: "text-blue-600 hover:underline" %></td>
                     </tr>
                 <% end %>

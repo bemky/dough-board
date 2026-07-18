@@ -7,6 +7,7 @@ class Transaction < ApplicationRecord
   
   belongs_to :asset
   
+  belongs_to :account
   before_validation :create_asset
   before_save :set_adjusted_quantity
   
