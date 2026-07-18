@@ -4,15 +4,20 @@ class Quote < ApplicationRecord
   
   before_validation :fetch
   
-  def fetch
-    return if price
+  def fetch(force=false)
+    return if price && !force
     if asset.type == "crypto"
       data = AlphaVantage.exchange(asset.symbol)
-      self.price = data["Exchange Rate"]
+      price = data["Exchange Rate"]
     else
       data = AlphaVantage.quote(asset.symbol)
-      self.price = data["price"]
+      price = data["price"]
     end
-    self.quoted_at = Time.now
+    quoted_at = Time.now
+    price
+  end
+  
+  def fetch!
+    update!(price: fetch(true), quoted_at: Time.now)
   end
 end

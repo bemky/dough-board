@@ -6,11 +6,18 @@ class Transaction < ApplicationRecord
   validates :type, inclusion: {in: %w(buy sale)}
   
   belongs_to :asset
-  
   belongs_to :account
+
   before_validation :create_asset
   before_save :set_adjusted_quantity
   
+  # Value of this holding at the asset's current price (cached via
+  # asset.current_quote), as opposed to `value` which is the value at execution.
+  def current_value
+    return unless asset&.price
+    (adjusted_quantity || quantity) * asset.price
+  end
+
   def create_asset
     return if asset_id
     self.asset = Asset.find_or_create_by(symbol: symbol)
