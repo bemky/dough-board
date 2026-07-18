@@ -16,6 +16,14 @@ class AlphaVantage
     }
   end
   
+  def exchange(symbol)
+    data = get(function: 'CURRENCY_EXCHANGE_RATE', from_currency: symbol, to_currency: 'USD')
+    
+    data["Realtime Currency Exchange Rate"].transform_keys {|key|
+      key.sub(/\d+\.\s/, "")
+    }
+  end
+  
   def time_series(symbol, options={})
     data = get(options.merge(
       function: 'TIME_SERIES_DAILY',

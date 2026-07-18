@@ -4,6 +4,8 @@
 Rails.application.config.assets.version = "1.0"
 
 Rails.application.config.assets.yield_self do |assets|
+  Rails.application.config.assets.precompile += %w( boot.js )
+  
   assets.configure do |app, env|
     env.register_postprocessor('text/css', ::Condenser::CSSMediaCombinerProcessor)
   end

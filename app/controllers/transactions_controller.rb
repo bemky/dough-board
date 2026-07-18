@@ -16,6 +16,10 @@ class TransactionsController < ApplicationController
     @portfolio.each do |sym, asset|
       asset[:value] = asset[:quantity] * Asset.find_by_symbol(sym).price
     end
+    @portfolio = @portfolio.map do |sym, asset|
+      asset[:symbol] = sym
+      asset
+    end
   end
   
 end

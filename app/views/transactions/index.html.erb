@@ -4,12 +4,35 @@
             Value
         </div>
         <div class="text-2x text-bold">
-            <%= number_to_currency @portfolio.values.sum{|x| x[:value]} %>
+            <% total = @portfolio.sum{|x| x[:value]} %>
+            <%= number_to_currency total %>
+        </div>
+        <div class="flex text-xs rounded overflow-hidden" style="gap: 1px;">
+            <% colors = %w(blue purple green yellow red gray) %>
+            <% @portfolio.each_with_index do |asset, index| %>
+                <div data-tooltip="<%= asset[:symbol] %>: <%= number_to_currency asset[:value] %>" class="bg-<%= colors[index % colors.length] %> text-white" style="width:<%= (asset[:value] / total) * 100 %>%">
+                    <%= asset[:symbol] %>
+                </div>
+            <% end %>
         </div>
     </div>
     <div class="flex gap-xl">
         <div class="flex-fill">
-            <table class="uniformTable">
+            <table class="uniformTable border-gray-20">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Execution</th>
+                        <th></th>
+                        <th class="text-right">
+                            Quantity <br>
+                            <span class="uniformLabel text-xs">Split Adjusted</span>
+                        </th>
+                        <th class="text-right">Value</th>
+                        <th>Vendor</th>
+                        <th></th>
+                    </tr>
+                </thead>
             <% @transactions.each do |transaction| %>
                 <tr>
                     <td>
@@ -17,11 +40,11 @@
                     </td>
                     <td><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
                     <td><%= transaction.asset.symbol %></td>
-                    <td>
+                    <td class="text-right">
                         <%= transaction.quantity %>
-                        (<%= transaction.adjusted_quantity %>)
+                        <span class="uniformLabel text-xs"><%= transaction.adjusted_quantity %></span>
                     </td>
-                    <td><%= transaction.value %></td>
+                    <td class="text-right"><%= number_to_currency transaction.value %></td>
                     <td><%= transaction.vendor %></td>
                     <td><%= link_to "Edit", transaction %></td>
                 </tr>
