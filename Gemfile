@@ -5,6 +5,9 @@ ruby "3.4.8"
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.1.0"
 
+# The modern asset pipeline for Rails [https://github.com/rails/propshaft]
+gem "propshaft"
+
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
 
@@ -20,10 +23,9 @@ gem "jbuilder"
 
 gem 'standardapi', require: 'standard_api', github: 'waratuman/standardapi', branch: 'master'
 
-gem 'sassc'
-gem 'condenser', github: 'malomalo/condenser', branch: 'master'
-gem 'condenser-rails', github: 'malomalo/condenser-rails', branch: 'master'
-gem 'uniform-ui', require: 'uniform', github: 'bemky/uniform', branch: 'master'
+# Front end assets
+gem "jsbundling-rails"
+gem "tailwindcss-rails"
 
 gem 'nokogiri'
 

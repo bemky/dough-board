@@ -6,11 +6,11 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
-    <%= stylesheet_link_tag 'application', media: 'all' %>
-    <%= javascript_include_tag 'boot' %>
+    <%= stylesheet_link_tag 'tailwind', 'data-turbo-track': 'reload' %>
+    <%= javascript_include_tag 'boot', 'data-turbo-track': 'reload', defer: true %>
   </head>
 
-  <body>
+  <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
     <%= yield %>
   </body>
 </html>

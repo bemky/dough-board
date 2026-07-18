@@ -1,9 +1,12 @@
 {
+  "name": "dough-board",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "build:watch": "node esbuild.config.mjs --watch"
+  },
   "dependencies": {
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-replace": "^6.0.3",
-    "dolla": "^1.2.7",
-    "rollup": "^4.9.6"
+    "esbuild": "^0.25.12"
   }
 }

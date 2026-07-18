@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+ENV["PORT"] ||= "3000"
+
+exec "./bin/rails", "server" if ARGV.include?("--rails-only")
+
+unless system("which foreman > /dev/null 2>&1")
+  puts "Installing foreman..."
+  system("gem install foreman")
+end
+
+exec "foreman", "start", "-f", "Procfile.dev", *ARGV

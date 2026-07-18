@@ -18,7 +18,11 @@ bin/rails test test/models/transaction_test.rb:12       # single test by line
 bin/rails test:system           # Capybara/Selenium system tests
 ```
 
-JS is bundled separately from Ruby: `npm install` pulls the rollup toolchain (`package.json`), and `app/assets/javascripts/boot.js` is the JS entry point.
+```bash
+bin/dev                         # run web + JS watcher + CSS watcher (Procfile.dev)
+```
+
+JS is bundled separately from Ruby: `npm install` pulls esbuild (`package.json`), and `esbuild.config.mjs` bundles `app/assets/javascripts/boot.js` → `app/assets/builds/boot.js`.
 
 ## Setup
 
@@ -43,4 +47,4 @@ bin/rails credentials:edit      # add alpha_vantage.api_key (see config/credenti
 
 **Portfolio aggregation** lives in `TransactionsController#index`: it folds buys/sales into per-symbol quantities using `adjusted_quantity`, then values each holding against the asset's current price.
 
-**Assets** use Condenser (`condenser-rails`), not Sprockets, with SassC for styles and the `uniform-ui` gem for JS components (Tooltip). `boot.js` is precompiled explicitly in `config/initializers/assets.rb`.
+**Assets** use the modern Rails pipeline: Propshaft serves fingerprinted assets from `app/assets/builds`, `jsbundling-rails` drives esbuild for JS (`esbuild.config.mjs`), and `tailwindcss-rails` compiles `app/assets/tailwind/application.css` → `app/assets/builds/tailwind.css` (Tailwind v4). Both build steps run automatically on `bin/rails test`/`assets:precompile`; use `bin/dev` (`Procfile.dev`) to watch them in development. The former Condenser/SassC/`uniform-ui` stack is gone — the layout links `tailwind.css` and the bundled `boot.js`, and the old uniform `Tooltip` is now a small vanilla `data-tooltip` handler in `boot.js`.

@@ -1,61 +1,63 @@
-<div class="pad-2x space-v-2x">
-    <div class="">
-        <div class="text-bold text-uppercase">
+<div class="p-8 space-y-8">
+    <div>
+        <div class="font-bold uppercase text-gray-500">
             Value
         </div>
-        <div class="text-2x text-bold">
+        <div class="text-2xl font-bold">
             <% total = @portfolio.sum{|x| x[:value]} %>
             <%= number_to_currency total %>
         </div>
-        <div class="flex text-xs rounded overflow-hidden" style="gap: 1px;">
-            <% colors = %w(blue purple green yellow red gray) %>
+        <div class="flex text-xs rounded overflow-hidden mt-2 gap-px">
+            <% colors = %w(bg-blue-500 bg-purple-500 bg-green-500 bg-yellow-500 bg-red-500 bg-gray-500) %>
             <% @portfolio.each_with_index do |asset, index| %>
-                <div data-tooltip="<%= asset[:symbol] %>: <%= number_to_currency asset[:value] %>" class="bg-<%= colors[index % colors.length] %> text-white" style="width:<%= (asset[:value] / total) * 100 %>%">
+                <div data-tooltip="<%= asset[:symbol] %>: <%= number_to_currency asset[:value] %>" tabindex="0" class="<%= colors[index % colors.length] %> text-white px-1 truncate" style="width:<%= total.zero? ? 0 : (asset[:value] / total) * 100 %>%">
                     <%= asset[:symbol] %>
                 </div>
             <% end %>
         </div>
     </div>
-    <div class="flex gap-xl">
-        <div class="flex-fill">
-            <table class="uniformTable border-gray-20">
+    <div class="flex gap-8">
+        <div class="flex-1">
+            <table class="w-full border-collapse">
                 <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Execution</th>
-                        <th></th>
-                        <th class="text-right">
+                    <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
+                        <th class="py-2 pr-4 font-semibold">Type</th>
+                        <th class="py-2 pr-4 font-semibold">Execution</th>
+                        <th class="py-2 pr-4 font-semibold"></th>
+                        <th class="py-2 pr-4 font-semibold text-right">
                             Quantity <br>
-                            <span class="uniformLabel text-xs">Split Adjusted</span>
+                            <span class="text-xs font-normal">Split Adjusted</span>
                         </th>
-                        <th class="text-right">Value</th>
-                        <th>Vendor</th>
-                        <th></th>
+                        <th class="py-2 pr-4 font-semibold text-right">Value</th>
+                        <th class="py-2 pr-4 font-semibold">Vendor</th>
+                        <th class="py-2 font-semibold"></th>
                     </tr>
                 </thead>
-            <% @transactions.each do |transaction| %>
-                <tr>
-                    <td>
-                        <span class="uniformLabel text-uppercase text-xs text-bold <%= transaction.type == "buy" ? "-green-60" : "-red" %>"><%= transaction.type %></span>
-                    </td>
-                    <td><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
-                    <td><%= transaction.asset.symbol %></td>
-                    <td class="text-right">
-                        <%= transaction.quantity %>
-                        <span class="uniformLabel text-xs"><%= transaction.adjusted_quantity %></span>
-                    </td>
-                    <td class="text-right"><%= number_to_currency transaction.value %></td>
-                    <td><%= transaction.vendor %></td>
-                    <td><%= link_to "Edit", transaction %></td>
-                </tr>
-            <% end %>
+                <tbody>
+                <% @transactions.each do |transaction| %>
+                    <tr class="border-b border-gray-100">
+                        <td class="py-2 pr-4">
+                            <span class="uppercase text-xs font-bold <%= transaction.type == "buy" ? "text-green-600" : "text-red-600" %>"><%= transaction.type %></span>
+                        </td>
+                        <td class="py-2 pr-4"><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
+                        <td class="py-2 pr-4"><%= transaction.asset.symbol %></td>
+                        <td class="py-2 pr-4 text-right">
+                            <%= transaction.quantity %>
+                            <span class="text-xs text-gray-500"><%= transaction.adjusted_quantity %></span>
+                        </td>
+                        <td class="py-2 pr-4 text-right"><%= number_to_currency transaction.value %></td>
+                        <td class="py-2 pr-4"><%= transaction.vendor %></td>
+                        <td class="py-2"><%= link_to "Edit", transaction, class: "text-blue-600 hover:underline" %></td>
+                    </tr>
+                <% end %>
+                </tbody>
             </table>
             <% if @transactions.length == 0 %>
-            No Transactions
+                <p class="text-gray-500 mt-4">No Transactions</p>
             <% end %>
         </div>
-        <div class="rounded-xl bg-gray-10 pad-2x">
-            <h3 class="margin-bottom">Add Transaction</h3>
+        <div class="rounded-xl bg-gray-100 p-8 w-80 shrink-0">
+            <h3 class="mb-4 text-lg font-semibold">Add Transaction</h3>
             <%= render partial: 'transactions/form', locals: {transaction: Transaction.new} %>
         </div>
     </div>
