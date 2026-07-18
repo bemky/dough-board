@@ -1,11 +1,6 @@
-#!/usr/bin/env ruby
-ENV["PORT"] ||= "3000"
+#!/usr/bin/env sh
 
-exec "./bin/rails", "server" if ARGV.include?("--rails-only")
+# Default to port 3000 if not specified
+export PORT="${PORT:-3000}"
 
-unless system("which foreman > /dev/null 2>&1")
-  puts "Installing foreman..."
-  system("gem install foreman")
-end
-
-exec "foreman", "start", "-f", "Procfile.dev", *ARGV
+exec hivemind Procfile.dev "$@"
