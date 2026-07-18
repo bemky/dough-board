@@ -18,10 +18,18 @@ require "rails/test_unit/railtie"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+# Read credentials from an unencrypted, environment-keyed config/credentials.yml.
+require_relative '../ext/active_support/encrypted_configuration'
+
 module DoughBoard
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.1
+
+    # Read credentials from an unencrypted, environment-keyed YAML file
+    # (config/credentials.yml) instead of the encrypted credentials.yml.enc.
+    # Rails selects the section matching the current environment automatically.
+    config.credentials.content_path = Rails.root.join("config", "credentials.yml")
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.

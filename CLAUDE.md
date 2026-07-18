@@ -26,11 +26,19 @@ JS is bundled separately from Ruby: `npm install` pulls esbuild (`package.json`)
 
 ## Setup
 
-AlphaVantage API key lives in encrypted credentials (needs `config/master.key`):
+Credentials live in an **unencrypted, environment-keyed** `config/credentials.yml`
+(gitignored; no `master.key`/`.enc`). Copy the template and fill in your values:
 
 ```bash
-bin/rails credentials:edit      # add alpha_vantage.api_key (see config/credentials.yml.sample)
+cp config/credentials.yml.sample config/credentials.yml   # then edit
 ```
+
+The file is keyed by environment (`development:`, `test:`), and Rails selects the
+current env's section automatically. Each section holds `secret_key_base` (generate
+one with `bin/rails secret`) and `alpha_vantage.api_key`. This override is wired up
+by `ext/active_support/encrypted_configuration.rb` (patches `ActiveSupport::EncryptedConfiguration`
+to read a plaintext, env-namespaced file), required early in `config/application.rb`
+alongside `config.credentials.content_path = Rails.root.join("config", "credentials.yml")`.
 
 ## Architecture
 
