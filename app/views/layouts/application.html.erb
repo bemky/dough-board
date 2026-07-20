@@ -11,6 +11,12 @@
   </head>
 
   <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
+    <% if flash[:notice] %>
+      <div class="bg-green-100 border-b border-green-200 px-8 py-3 text-sm text-green-800"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="bg-red-100 border-b border-red-200 px-8 py-3 text-sm text-red-800"><%= flash[:alert] %></div>
+    <% end %>
     <%= yield %>
   </body>
 </html>

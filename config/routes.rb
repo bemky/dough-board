@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   
   root "transactions#index"
   
+  post "transactions/import", to: "transactions#import", as: :import_transactions
   standard_resources :transactions
   standard_resources :accounts
 end

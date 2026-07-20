@@ -14,12 +14,21 @@ class SplitHistoryScraper
     doc = Nokogiri::HTML(response.body)
     
     if table = doc.css('table').find{|x| x.content.lstrip.starts_with? "#{symbol.upcase} Split History Table"}
-      table.css('tr').slice(1..-1).map{|row|
+      # The table carries two header rows (a title row and a "Date | Ratio"
+      # column-header row), so skip any row whose first cell isn't a real date
+      # rather than blowing up on it.
+      table.css('tr').filter_map{|row|
+        date = begin
+          DateTime.strptime(row.children[0].content, "%m/%d/%Y")
+        rescue Date::Error
+          nil
+        end
+        next unless date
+
         ratio_parts = row.children[1].content.split(" for ").map(&:to_f)
-        [
-          DateTime.strptime(row.children[0].content, "%m/%d/%Y"),
-          ratio_parts[0] / ratio_parts[1]
-        ]
+        next if ratio_parts.length < 2 || ratio_parts[1].zero?
+
+        [date, ratio_parts[0] / ratio_parts[1]]
       }
     else
       []

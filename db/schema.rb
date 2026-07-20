@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_231631) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_20_141429) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -53,10 +53,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_231631) do
     t.integer "asset_id", null: false
     t.datetime "created_at", null: false
     t.datetime "executed_at", null: false
+    t.string "foreign_id"
     t.float "quantity"
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.float "value"
+    t.index ["account_id", "foreign_id"], name: "index_transactions_on_account_id_and_foreign_id", unique: true, where: "foreign_id IS NOT NULL"
     t.index ["account_id"], name: "index_transactions_on_account_id"
     t.index ["asset_id"], name: "index_transactions_on_asset_id"
   end

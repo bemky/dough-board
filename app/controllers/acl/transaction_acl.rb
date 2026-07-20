@@ -7,7 +7,8 @@ module TransactionACL
       :account_id,
       :quantity,
       :value,
-      :type
+      :type,
+      :foreign_id
     ]
   end
 

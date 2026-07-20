@@ -29,6 +29,9 @@ gem "tailwindcss-rails"
 
 gem 'nokogiri'
 
+# CSV parsing for transaction imports (bundled gem in Ruby 3.4+)
+gem 'csv'
+
 # Finnhub API client for stock/crypto quotes [https://github.com/Finnhub-Stock-API/finnhub-ruby]
 gem 'finnhub_ruby'
 

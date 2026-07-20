@@ -23,7 +23,10 @@ class Transaction < ApplicationRecord
     end
 
     holdings.values.each do |holding|
-      holding[:value] = holding[:quantity] * holding.delete(:asset).price
+      # asset.price is nil when Finnhub has no quote (delisted/unknown symbol);
+      # such holdings can't be valued, so treat them as 0.
+      price = holding.delete(:asset).price
+      holding[:value] = holding[:quantity] * (price || 0)
     end
   end
   
