@@ -4,6 +4,28 @@ class Transaction < ApplicationRecord
   attr_accessor :symbol
 
   validates :type, inclusion: {in: %w(buy sale)}
+
+  # Folds a set of transactions into per-symbol holdings valued at the asset's
+  # current price. Callable on any scope, so `Transaction.portfolio` gives the
+  # global portfolio and `account.transactions.portfolio` gives one account's.
+  # Returns [{symbol:, quantity:, value:}, ...].
+  def self.portfolio
+    holdings = {}
+    includes(:asset).each do |transaction|
+      holding = holdings[transaction.asset.symbol] ||= {
+        symbol: transaction.asset.symbol, asset: transaction.asset, quantity: 0, value: 0
+      }
+      if transaction.type == "buy"
+        holding[:quantity] += transaction.adjusted_quantity
+      else
+        holding[:quantity] -= transaction.adjusted_quantity
+      end
+    end
+
+    holdings.values.each do |holding|
+      holding[:value] = holding[:quantity] * holding.delete(:asset).price
+    end
+  end
   
   belongs_to :asset
   belongs_to :account

@@ -13,8 +13,12 @@
         </div>
     </div>
 
+    <% transactions = @account.transactions.order(executed_at: :desc) %>
+
+    <%= render partial: 'transactions/portfolio', locals: {portfolio: transactions.portfolio} %>
+
     <%= render partial: 'transactions/table', locals: {
-        transactions: @account.transactions.order(executed_at: :desc),
+        transactions: transactions,
         show_account: false,
         empty_message: "No transactions for this account."
     } %>
