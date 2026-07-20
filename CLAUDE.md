@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Dough Board is a Rails 8.1 app (Ruby 3.4.8, SQLite) for tracking personal assets/liabilities. It pulls live quotes and historical data from [AlphaVantage](https://www.alphavantage.co/) and scrapes stock split history from splithistory.com.
+Dough Board is a Rails 8.1 app (Ruby 3.4.8, SQLite) for tracking personal assets/liabilities. It pulls live quotes from [Finnhub](https://finnhub.io/) (via the `finnhub_ruby` gem) and scrapes stock split history from splithistory.com.
 
 ## Commands
 
@@ -35,7 +35,7 @@ cp config/credentials.yml.sample config/credentials.yml   # then edit
 
 The file is keyed by environment (`development:`, `test:`), and Rails selects the
 current env's section automatically. Each section holds `secret_key_base` (generate
-one with `bin/rails secret`) and `alpha_vantage.api_key`. This override is wired up
+one with `bin/rails secret`) and `finnhub.api_key`. This override is wired up
 by `ext/active_support/encrypted_configuration.rb` (patches `ActiveSupport::EncryptedConfiguration`
 to read a plaintext, env-namespaced file), required early in `config/application.rb`
 alongside `config.credentials.content_path = Rails.root.join("config", "credentials.yml")`.
@@ -44,12 +44,12 @@ alongside `config.credentials.content_path = Rails.root.join("config", "credenti
 
 **StandardAPI-driven controllers.** Controllers/routing use the `standardapi` gem, not stock Rails scaffolding. Routes are declared with `standard_resources :transactions` (see `config/routes.rb`), and `ApplicationController` includes `StandardAPI::Controller` + `StandardAPI::AccessControlList`. Controller-permitted attributes are defined in ACL modules under `app/controllers/acl/` (e.g. `TransactionACL#attributes`), **not** via `params.permit`. `ApplicationController#create` is monkey-patched to redirect on HTML requests while keeping JSON `render :show` behavior. Note: standardapi requires the `pg` gem at load time (it patches the PostgreSQL adapter) even though this app connects via sqlite3 — hence `pg` in the Gemfile.
 
-**External data via singletons.** Two service objects use the `Singleton` + `method_missing` class-delegation pattern so they're called as `AlphaVantage.quote(sym)` / `SplitHistoryScraper.splits(sym)`:
-- `config/initializers/alpha_vantage.rb` — REST client for quotes (`GLOBAL_QUOTE`), crypto rates (`CURRENCY_EXCHANGE_RATE`), and daily time series. Strips the AlphaVantage `"01. symbol"` numeric key prefixes.
+**External data via singletons.** Two service objects use the `Singleton` + `method_missing` class-delegation pattern so they're called as `Finnhub.quote(sym)` / `SplitHistoryScraper.splits(sym)`:
+- `config/initializers/finnhub.rb` — thin wrapper over the `finnhub_ruby` gem's `DefaultApi#quote` (a hand-written client whose `quote` returns a Hash); `Finnhub.quote(sym)` returns the current price (the `c` field), or `nil` when Finnhub has no data (an unknown symbol returns `c=0`) or the request fails (e.g. rate limited, raising `FinnhubRuby::FinnhubAPIException`). Finnhub only prices crypto for exchange-prefixed pairs, so `Asset#quote_symbol` maps crypto symbols to `BINANCE:<SYM>USDT` (stocks/funds pass through unchanged); `Quote#fetch` requests `asset.quote_symbol`.
 - `config/initializers/split_history_scraper.rb` — Nokogiri HTML scraper returning `[split_date, ratio]` pairs.
 
 **Model layer does the fetching automatically.** The `type` column on `Asset` and `Transaction` is a plain string, not Rails STI — both models set `self.inheritance_column = nil` to disable STI while keeping a `type` attribute (`Asset` type ∈ stock/fund/crypto, `Transaction` type ∈ buy/sale).
-- `Quote` has a `before_validation :fetch` that lazily populates `price`/`quoted_at` from AlphaVantage. `Asset#current_quote` returns a cached quote if one is <24h old, otherwise **creates a new Quote** (triggering a fetch). Reading `asset.price` can therefore hit the network.
+- `Quote` has a `before_validation :fetch` that lazily populates `price`/`quoted_at` from Finnhub. When Finnhub returns no price (unknown symbol, rate limit), `fetch` does `throw :abort` so the blank Quote is **not** persisted. `Asset#current_quote` returns a cached quote if one is <24h old, otherwise **creates a new Quote** (triggering a fetch). Reading `asset.price` can therefore hit the network.
 - `Asset#load_splits` caches scraped splits for 24h via the `splits_updated_at` timestamp.
 - `Transaction` auto-creates its `Asset` from a virtual `symbol` accessor (`before_validation :create_asset`) and computes `adjusted_quantity` (`before_save`) by multiplying `quantity` through every split that occurred after `executed_at`.
 

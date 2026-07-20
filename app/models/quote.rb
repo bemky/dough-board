@@ -1,23 +1,22 @@
 class Quote < ApplicationRecord
-  
+
   belongs_to :asset
-  
+
   before_validation :fetch
-  
+
   def fetch(force=false)
     return if price && !force
-    if asset.type == "crypto"
-      data = AlphaVantage.exchange(asset.symbol)
-      price = data["Exchange Rate"]
-    else
-      data = AlphaVantage.quote(asset.symbol)
-      price = data["price"]
-    end
-    quoted_at = Time.now
+    price = Finnhub.quote(asset.quote_symbol)
+    # Abort the callback chain (so a blank Quote is never persisted) when
+    # Finnhub returns nothing — e.g. an unknown symbol or a rate-limited request.
+    throw :abort if price.nil?
+    self.price = price
+    self.quoted_at = Time.now
     price
   end
-  
+
   def fetch!
-    update!(price: fetch(true), quoted_at: Time.now)
+    self.price = nil
+    save!
   end
 end

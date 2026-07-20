@@ -13,6 +13,12 @@ class Asset < ApplicationRecord
   def price
     current_quote&.price
   end
+
+  # The symbol to request a Finnhub quote for. Crypto needs an exchange-prefixed
+  # trading pair (e.g. "BTC" -> "BINANCE:BTCUSDT"); stocks/funds use the symbol as-is.
+  def quote_symbol
+    type == "crypto" ? "BINANCE:#{symbol}USDT" : symbol
+  end
   
   def current_quote
     quotes.filter(quoted_at: {gt: 24.hours.ago}).order(quoted_at: :desc).first ||

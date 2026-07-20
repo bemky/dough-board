@@ -29,6 +29,9 @@ gem "tailwindcss-rails"
 
 gem 'nokogiri'
 
+# Finnhub API client for stock/crypto quotes [https://github.com/Finnhub-Stock-API/finnhub-ruby]
+gem 'finnhub_ruby'
+
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"
 
