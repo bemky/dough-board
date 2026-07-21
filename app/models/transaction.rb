@@ -8,7 +8,7 @@ class Transaction < ApplicationRecord
   # Folds a set of transactions into per-symbol holdings valued at the asset's
   # current price. Callable on any scope, so `Transaction.portfolio` gives the
   # global portfolio and `account.transactions.portfolio` gives one account's.
-  # Returns [{symbol:, quantity:, value:}, ...].
+  # Returns [{symbol:, asset:, quantity:, price:, value:}, ...], richest first.
   def self.portfolio
     holdings = {}
     includes(:asset).each do |transaction|
@@ -25,9 +25,9 @@ class Transaction < ApplicationRecord
     holdings.values.each do |holding|
       # asset.price is nil when Finnhub has no quote (delisted/unknown symbol);
       # such holdings can't be valued, so treat them as 0.
-      price = holding.delete(:asset).price
-      holding[:value] = holding[:quantity] * (price || 0)
-    end
+      holding[:price] = holding[:asset].price
+      holding[:value] = holding[:quantity] * (holding[:price] || 0)
+    end.sort_by { |holding| -holding[:value] }
   end
   
   belongs_to :asset

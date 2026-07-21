@@ -1,8 +1,22 @@
 class TransactionsController < ApplicationController
   
+  PER_PAGE_OPTIONS = [20, 50, 100, 250].freeze
+
+  # Nested under /accounts/:account_id/transactions this renders one account's
+  # transactions (the account subnav's Transactions tab); unnested it renders
+  # every account's, alongside the add/import forms.
   def index
-    @transactions = Transaction.order(executed_at: :desc)
-    @portfolio = @transactions.portfolio
+    @account = Account.find(params[:account_id]) if params[:account_id]
+    scope = (@account ? @account.transactions : Transaction.all).order(executed_at: :desc)
+
+    # Only honor a per_page the select offers, so the param can't ask for an
+    # unbounded page.
+    @per_page = PER_PAGE_OPTIONS.include?(params[:per_page].to_i) ? params[:per_page].to_i : PER_PAGE_OPTIONS.first
+    @total_count = scope.count
+    @total_pages = [(@total_count / @per_page.to_f).ceil, 1].max
+    @page = params[:page].to_i.clamp(1, @total_pages)
+
+    @transactions = scope.limit(@per_page).offset((@page - 1) * @per_page)
   end
 
   # standardapi provides show/new/create/update but no edit action, so define

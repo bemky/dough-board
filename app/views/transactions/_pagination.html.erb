@@ -1,0 +1,36 @@
+<% first = total_count.zero? ? 0 : (page - 1) * per_page + 1 %>
+<% last = [page * per_page, total_count].min %>
+<div class="flex flex-wrap items-center justify-between gap-4 pt-4 text-sm">
+    <div class="text-gray-500">
+        <%= "#{number_with_delimiter first}–#{number_with_delimiter last} of #{number_with_delimiter total_count}" %>
+    </div>
+
+    <div class="flex items-center gap-6">
+        <%= form_with url: request.path, method: :get do %>
+            <div class="flex items-center gap-2">
+                <%= label_tag :per_page, "Per page", class: "text-gray-500" %>
+                <%= select_tag :per_page,
+                    options_for_select(TransactionsController::PER_PAGE_OPTIONS, per_page),
+                    data: {auto_submit: true},
+                    class: "rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" %>
+                <noscript>
+                    <button type="submit" class="rounded-md border border-gray-300 px-2 py-1">Apply</button>
+                </noscript>
+            </div>
+        <% end %>
+
+        <div class="flex items-center gap-3">
+            <% if page > 1 %>
+                <%= link_to "← Prev", url_for(page: page - 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
+            <% else %>
+                <span class="text-gray-300">← Prev</span>
+            <% end %>
+            <span class="text-gray-500">Page <%= page %> of <%= total_pages %></span>
+            <% if page < total_pages %>
+                <%= link_to "Next →", url_for(page: page + 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
+            <% else %>
+                <span class="text-gray-300">Next →</span>
+            <% end %>
+        </div>
+    </div>
+</div>

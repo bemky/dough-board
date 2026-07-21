@@ -1,25 +1,12 @@
-<div class="p-8 space-y-6">
-    <div class="flex items-start justify-between">
-        <div>
-            <div class="font-bold uppercase text-gray-500"><%= @account.provider %></div>
-            <h1 class="text-2xl font-bold"><%= @account.name %></h1>
-            <% if @account.number.present? %>
-                <div class="text-sm text-gray-500">#<%= @account.number %></div>
-            <% end %>
-        </div>
-        <div class="flex items-center gap-4">
-            <%= link_to "Edit", edit_account_path(@account), class: "text-blue-600 hover:underline" %>
-            <%= link_to "← Portfolio", root_path, class: "text-gray-500 hover:text-gray-700" %>
-        </div>
-    </div>
+<div class="p-8 space-y-8">
+    <%= render partial: 'accounts/header', locals: {account: @account, tab: :assets} %>
 
-    <% transactions = @account.transactions.order(executed_at: :desc) %>
+    <% portfolio = @account.transactions.portfolio %>
 
-    <%= render partial: 'transactions/portfolio', locals: {portfolio: transactions.portfolio} %>
+    <%= render partial: 'transactions/portfolio', locals: {portfolio: portfolio} %>
 
-    <%= render partial: 'transactions/table', locals: {
-        transactions: transactions,
-        show_account: false,
-        empty_message: "No transactions for this account."
+    <%= render partial: 'assets/table', locals: {
+        portfolio: portfolio,
+        empty_message: "No assets for this account."
     } %>
 </div>

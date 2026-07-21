@@ -1,0 +1,31 @@
+<% empty_message = local_assigns.fetch(:empty_message, "No Assets") %>
+<table class="w-full border-collapse">
+    <thead>
+        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
+            <th class="py-2 pr-4 font-semibold">Symbol</th>
+            <th class="py-2 pr-4 font-semibold">Type</th>
+            <th class="py-2 pr-4 font-semibold text-right">
+                Quantity <br>
+                <span class="text-xs font-normal">Split Adjusted</span>
+            </th>
+            <th class="py-2 pr-4 font-semibold text-right">Price</th>
+            <th class="py-2 font-semibold text-right">Value</th>
+        </tr>
+    </thead>
+    <tbody>
+    <% portfolio.each do |holding| %>
+        <tr class="border-b border-gray-100">
+            <td class="py-2 pr-4 font-semibold"><%= holding[:symbol] %></td>
+            <td class="py-2 pr-4 text-gray-500"><%= holding[:asset].type %></td>
+            <td class="py-2 pr-4 text-right"><%= holding[:quantity].round(4) %></td>
+            <td class="py-2 pr-4 text-right">
+                <%= holding[:price] ? number_to_currency(holding[:price]) : content_tag(:span, "No quote", class: "text-xs text-gray-400") %>
+            </td>
+            <td class="py-2 text-right"><%= number_to_currency holding[:value] %></td>
+        </tr>
+    <% end %>
+    </tbody>
+</table>
+<% if portfolio.empty? %>
+    <p class="text-gray-500 mt-4"><%= empty_message %></p>
+<% end %>

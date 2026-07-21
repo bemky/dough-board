@@ -11,6 +11,15 @@
   </head>
 
   <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
+    <nav class="border-b border-gray-200 bg-white px-8">
+      <div class="flex items-center gap-8">
+        <%= link_to "DoughBoard", root_path, class: "font-bold" %>
+        <div class="flex gap-6">
+          <%= nav_tab "Assets", assets_path, controller_name == "assets" %>
+          <%= nav_tab "Transactions", transactions_path, controller_name == "transactions" %>
+        </div>
+      </div>
+    </nav>
     <% if flash[:notice] %>
       <div class="bg-green-100 border-b border-green-200 px-8 py-3 text-sm text-green-800"><%= flash[:notice] %></div>
     <% end %>

@@ -77,7 +77,16 @@ function initDropzone() {
   })
 }
 
+// Submits the enclosing form as soon as a `[data-auto-submit]` control changes,
+// so selects like the pagination per-page picker need no Apply button.
+function initAutoSubmit() {
+  document.querySelectorAll('[data-auto-submit]').forEach((el) => {
+    el.addEventListener('change', () => el.form && el.form.requestSubmit())
+  })
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTooltips()
   initDropzone()
+  initAutoSubmit()
 })
