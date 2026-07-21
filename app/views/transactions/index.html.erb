@@ -15,7 +15,7 @@
                     <div class="space-y-4">
                         <div>
                             <%= label_tag :account_id, "Account", class: "block text-sm font-medium text-gray-700 mb-1" %>
-                            <%= collection_select :account_id, nil, Account.order(:provider, :name), :id, :label, { prompt: "Select account" }, class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" %>
+                            <%= select_tag :account_id, options_from_collection_for_select(Account.order(:provider, :name), :id, :label), include_blank: "Select account", class: "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" %>
                         </div>
                         <label data-dropzone class="flex flex-col items-center justify-center cursor-pointer rounded-md border-2 border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-500 hover:border-blue-400 hover:bg-blue-50 transition-colors">
                             <span data-dropzone-label>Drag &amp; drop a CSV here, or click to browse</span>
