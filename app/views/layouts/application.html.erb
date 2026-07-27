@@ -16,6 +16,7 @@
         <%= link_to "DoughBoard", root_path, class: "font-bold" %>
         <div class="flex gap-6">
           <%= nav_tab "Assets", assets_path, controller_name == "assets" %>
+          <%= nav_tab "Accounts", accounts_path, controller_name == "accounts" %>
           <%= nav_tab "Transactions", transactions_path, controller_name == "transactions" %>
         </div>
       </div>

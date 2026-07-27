@@ -1,0 +1,9 @@
+<div class="p-8 space-y-8">
+    <div class="flex items-start justify-between">
+        <h1 class="text-2xl font-bold">Accounts</h1>
+        <%= link_to "New Account", new_account_path, class: "text-blue-600 hover:underline" %>
+    </div>
+
+    <%= render partial: 'accounts/treemap', locals: {accounts: @accounts} %>
+    <%= render partial: 'accounts/table', locals: {accounts: @accounts} %>
+</div>
