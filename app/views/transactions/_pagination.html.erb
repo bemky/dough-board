@@ -7,6 +7,12 @@
 
     <div class="flex items-center gap-6">
         <%= form_with url: request.path, method: :get do %>
+            <% params.fetch(:order, {}).each do |key, direction| %>
+                <%= hidden_field_tag "order[#{key}]", direction, id: nil %>
+            <% end %>
+            <% Array(params[:symbols]).each do |symbol| %>
+                <%= hidden_field_tag "symbols[]", symbol, id: nil %>
+            <% end %>
             <div class="flex items-center gap-2">
                 <%= label_tag :per_page, "Per page", class: "text-gray-500" %>
                 <%= select_tag :per_page,
@@ -21,13 +27,13 @@
 
         <div class="flex items-center gap-3">
             <% if page > 1 %>
-                <%= link_to "← Prev", url_for(page: page - 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
+                <%= link_to "← Prev", list_url(page: page - 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
             <% else %>
                 <span class="text-gray-300">← Prev</span>
             <% end %>
             <span class="text-gray-500">Page <%= page %> of <%= total_pages %></span>
             <% if page < total_pages %>
-                <%= link_to "Next →", url_for(page: page + 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
+                <%= link_to "Next →", list_url(page: page + 1, per_page: per_page), class: "text-blue-600 hover:underline" %>
             <% else %>
                 <span class="text-gray-300">Next →</span>
             <% end %>

@@ -1,3 +1,30 @@
+import Dropdown from 'komps/dropdown'
+
+// Column filter dropdowns: each `[data-filter-button]` gets a Komps.Dropdown
+// whose content is the sibling `<template>`'s markup (a checkbox form rendered
+// server-side). Built lazily on first click so a long symbol list costs nothing
+// until it's opened.
+function initFilterDropdowns() {
+  document.querySelectorAll('[data-filter-button]').forEach((button) => {
+    const template = button.parentElement.querySelector('[data-filter-content]')
+    if (!template) return
+
+    let dropdown
+    button.addEventListener('click', () => {
+      if (dropdown) return
+      dropdown = new Dropdown({
+        anchor: button,
+        placement: 'bottom-start',
+        autoPlacement: false,
+        content: template.content.cloneNode(true),
+        class:
+          'z-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg',
+      })
+      dropdown.show()
+    })
+  })
+}
+
 // Lightweight tooltip: shows the value of a `data-tooltip` attribute in a
 // floating element positioned above the anchor on hover/focus.
 function initTooltips() {
@@ -86,6 +113,7 @@ function initAutoSubmit() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initFilterDropdowns()
   initTooltips()
   initDropzone()
   initAutoSubmit()

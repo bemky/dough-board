@@ -4,6 +4,8 @@
 
         <%= render partial: 'transactions/table', locals: {
             transactions: @transactions,
+            symbols: @symbols,
+            selected_symbols: @selected_symbols,
             show_account: false,
             empty_message: "No transactions for this account."
         } %>
@@ -12,7 +14,11 @@
     <% else %>
         <div class="flex gap-8">
             <div class="flex-1">
-                <%= render partial: 'transactions/table', locals: {transactions: @transactions} %>
+                <%= render partial: 'transactions/table', locals: {
+                    transactions: @transactions,
+                    symbols: @symbols,
+                    selected_symbols: @selected_symbols
+                } %>
                 <%= render partial: 'transactions/pagination', locals: {page: @page, per_page: @per_page, total_pages: @total_pages, total_count: @total_count} %>
             </div>
             <div class="w-80 shrink-0 space-y-8">

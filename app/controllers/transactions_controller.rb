@@ -7,7 +7,13 @@ class TransactionsController < ApplicationController
   # every account's, alongside the add/import forms.
   def index
     @account = Account.find(params[:account_id]) if params[:account_id]
-    scope = (@account ? @account.transactions : Transaction.all).order(executed_at: :desc)
+    scope = @account ? @account.transactions : Transaction.all
+
+    # Every symbol available to filter by — the unfiltered scope's, so the
+    # dropdown's options don't disappear as the user narrows the list.
+    @symbols = Asset.where(id: scope.select(:asset_id)).order(:symbol).pluck(:symbol)
+    @selected_symbols = Array(params[:symbols]).map(&:to_s) & @symbols
+    scope = scope.where(asset_id: Asset.where(symbol: @selected_symbols)) if @selected_symbols.any?
 
     # Only honor a per_page the select offers, so the param can't ask for an
     # unbounded page.
@@ -16,7 +22,14 @@ class TransactionsController < ApplicationController
     @total_pages = [(@total_count / @per_page.to_f).ceil, 1].max
     @page = params[:page].to_i.clamp(1, @total_pages)
 
-    @transactions = scope.limit(@per_page).offset((@page - 1) * @per_page)
+    # `orders` sanitizes params[:order] against TransactionACL#orders, so an
+    # unpermitted sort key raises rather than reaching the query.
+    @transactions = scope.sort(orders).limit(@per_page).offset((@page - 1) * @per_page)
+  end
+
+  # Newest first until a header is clicked. Private so it isn't routable.
+  private def default_orders
+    {executed_at: :desc}
   end
 
   # standardapi provides show/new/create/update but no edit action, so define
