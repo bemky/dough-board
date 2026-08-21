@@ -3,6 +3,7 @@ lock "~> 3.19"
 
 set :application, "dough-board"
 set :repo_url, "git@github.com:bemky/dough-board.git"
+set :branch, "main"
 
 # Default deploy_to directory is /var/www/my_app_name
 set :deploy_to, "/srv/dough-board"
