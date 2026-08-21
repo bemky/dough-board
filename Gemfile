@@ -35,6 +35,10 @@ gem 'csv'
 # Finnhub API client for stock/crypto quotes [https://github.com/Finnhub-Stock-API/finnhub-ruby]
 gem 'finnhub_ruby'
 
+# Writes config/schedule.rb into a crontab entry so quotes can be refreshed
+# on a schedule instead of only on demand [https://github.com/javan/whenever]
+gem "whenever", require: false
+
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"
 
