@@ -19,10 +19,21 @@ class Asset < ApplicationRecord
   def quote_symbol
     type == "crypto" ? "BINANCE:#{symbol}USDT" : symbol
   end
-  
+
   def current_quote
-    quotes.filter(quoted_at: {gt: 24.hours.ago}).order(quoted_at: :desc).first ||
-    Quote.create(asset: self)
+    cached_quote || Quote.create(asset: self)
+  end
+
+  # A <24h-old quote already on hand, or nil — never hits Finnhub. Pages that
+  # render many assets at once (the portfolio index) use this instead of
+  # `current_quote`/`price` so rendering never blocks on the Finnhub API; the
+  # page's JS fills in fresh prices afterward via AssetsController#quote.
+  def cached_quote
+    quotes.filter(quoted_at: {gt: 24.hours.ago}).order(quoted_at: :desc).first
+  end
+
+  def cached_price
+    cached_quote&.price
   end
   
   def load_splits(force=false)

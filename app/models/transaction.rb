@@ -23,11 +23,13 @@ class Transaction < ApplicationRecord
     end
 
     holdings.values.each do |holding|
-      # asset.price is nil when Finnhub has no quote (delisted/unknown symbol);
-      # such holdings can't be valued, so treat them as 0.
-      holding[:price] = holding[:asset].price
+      # asset.cached_price is nil when there's no <24h-old quote on hand yet
+      # (delisted/unknown symbol, or one just not fetched recently) — such
+      # holdings render as unvalued (0) until the page's JS fetches a fresh
+      # price from AssetsController#quote.
+      holding[:price] = holding[:asset].cached_price
       holding[:value] = holding[:quantity] * (holding[:price] || 0)
-    end.sort_by { |holding| -holding[:value] }
+    end.filter{|h| h[:quantity] > 0}
   end
   
   belongs_to :asset
@@ -41,6 +43,14 @@ class Transaction < ApplicationRecord
   def current_value
     return unless asset&.price
     (adjusted_quantity || quantity) * asset.price
+  end
+
+  # Same as `current_value` but never hits Finnhub — used for the transactions
+  # table's initial render, which is filled in with a fresh price by the
+  # page's JS afterward.
+  def cached_value
+    return unless asset&.cached_price
+    (adjusted_quantity || quantity) * asset.cached_price
   end
 
   def create_asset

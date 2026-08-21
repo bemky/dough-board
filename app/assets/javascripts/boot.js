@@ -112,9 +112,66 @@ function initAutoSubmit() {
   })
 }
 
+// Portfolio/transactions pages render with cached-only prices (so they never
+// block on Finnhub). Each distinct `[data-quote-symbol]` on the page gets a
+// fetch to /assets/:symbol/quote; the server paces the underlying Finnhub
+// calls, so it's safe to fire all of them at once here. Each cell's price
+// and computed value (quantity × price) update in place as responses land,
+// and the portfolio total is resummed from the updated rows.
+function initQuoteRefresh() {
+  const cellsBySymbol = new Map()
+  document.querySelectorAll('[data-quote-symbol]').forEach((cell) => {
+    const symbol = cell.dataset.quoteSymbol
+    if (!cellsBySymbol.has(symbol)) cellsBySymbol.set(symbol, [])
+    cellsBySymbol.get(symbol).push(cell)
+  })
+  if (!cellsBySymbol.size) return
+
+  const formatCurrency = (amount) =>
+    amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+
+  const applyQuote = (cell, price) => {
+    const priceTarget = cell.querySelector('[data-quote-price]')
+    if (priceTarget) priceTarget.textContent = formatCurrency(price)
+
+    const quantity = parseFloat(cell.dataset.quantity)
+    if (!Number.isFinite(quantity)) return
+    const value = quantity * price
+
+    const amountTarget = cell.querySelector('[data-quote-amount]')
+    if (amountTarget) amountTarget.textContent = formatCurrency(value)
+
+    const valueCell = cell.closest('tr')?.querySelector('[data-quote-value]')
+    if (valueCell) valueCell.textContent = formatCurrency(value)
+  }
+
+  const updatePortfolioTotal = () => {
+    const totalEl = document.querySelector('[data-portfolio-total]')
+    if (!totalEl) return
+    let total = 0
+    document.querySelectorAll('[data-quote-value]').forEach((el) => {
+      const amount = parseFloat(el.textContent.replace(/[^0-9.-]/g, ''))
+      if (Number.isFinite(amount)) total += amount
+    })
+    totalEl.textContent = formatCurrency(total)
+  }
+
+  cellsBySymbol.forEach((cells, symbol) => {
+    fetch(`/quotes/${encodeURIComponent(symbol)}`)
+      .then((response) => response.json())
+      .then(({ price }) => {
+        if (price == null) return
+        cells.forEach((cell) => applyQuote(cell, price))
+        updatePortfolioTotal()
+      })
+      .catch(() => {})
+  })
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initFilterDropdowns()
   initTooltips()
   initDropzone()
   initAutoSubmit()
+  initQuoteRefresh()
 })

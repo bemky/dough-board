@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   root "assets#index"
 
   get "assets", to: "assets#index", as: :assets
+  get "quotes/:symbol", to: "assets#quote", as: :asset_quote, constraints: {symbol: /[^\/]+/}
 
   post "transactions/import", to: "transactions#import", as: :import_transactions
   standard_resources :transactions
