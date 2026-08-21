@@ -5,7 +5,7 @@ class SessionsController < ApplicationController
   end
 
   def create
-    if app_password.present? && ActiveSupport::SecurityUtils.variable_size_secure_compare(params[:password].to_s, app_password.to_s)
+    if app_password.present? && ActiveSupport::SecurityUtils.secure_compare(params[:password].to_s, app_password.to_s)
       session[:logged_in] = true
       redirect_to params[:redirect_to].presence || root_path
     else
