@@ -2,6 +2,7 @@ require "application_system_test_case"
 
 class SymbolFilterTest < ApplicationSystemTestCase
   setup do
+    sign_in
     t = Time.current
     Asset.insert_all([{symbol: "ZZZ", created_at: t, updated_at: t}, {symbol: "AAA", created_at: t, updated_at: t}])
     account = Account.create!(name: "Test", provider: "P")

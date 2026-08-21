@@ -1,7 +1,9 @@
 class ApplicationController < ActionController::Base
   include StandardAPI::Controller
   include StandardAPI::AccessControlList
-  
+
+  before_action :require_login
+
   # Monkey Patch StandardAPI#create to redirect
   def create
     record = model.new(model_params)
@@ -29,6 +31,14 @@ class ApplicationController < ActionController::Base
       else
         render :show, status: :bad_request
       end
+    end
+  end
+
+  private
+
+  def require_login
+    unless session[:logged_in]
+      redirect_to login_path(redirect_to: request.fullpath)
     end
   end
 end
