@@ -1,1 +1,1 @@
-server "45.79.42.60", roles: %w(app db), primary: true
+server "172.233.216.92", roles: %w(app db), primary: true
