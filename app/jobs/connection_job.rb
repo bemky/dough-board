@@ -1,0 +1,113 @@
+# Pulls one connection's accounts, positions and activities through its
+# connector and writes them down.
+#
+# Positions come from the institution, which knows about corporate actions,
+# transfers and reinvestments we would never reconstruct correctly from
+# transactions — so a synced account's positions are taken as given, and
+# DerivePositionsJob leaves it alone (Account#derives_positions? is false for
+# positions_source "connection").
+class ConnectionJob < ApplicationJob
+  queue_as :default
+
+  # Skipped when the connection no longer exists (deleted between enqueue and run).
+  discard_on ActiveJob::DeserializationError
+
+  # With no `as_of` this corrects the current snapshot in place, the same way
+  # DerivePositionsJob does; the periodic rake task passes one to append a point
+  # to the value history.
+  def perform(connection, as_of: nil)
+    connector = connection.client
+
+    connector.accounts(connection).each do |attributes|
+      account = upsert_account(connection, attributes)
+      sync_positions(connector, connection, account, as_of)
+      sync_transactions(connector, connection, account)
+    end
+
+    connection.update!(synced_at: Time.current, last_error: nil)
+  rescue Connectors::ConnectionError, ActiveRecord::RecordInvalid => e
+    # Worth keeping on the connection so the UI can say why it's stale, and
+    # worth re-raising so the queue records a failure rather than a quiet no-op.
+    connection.update_columns(last_error: e.message.to_s.truncate(250), updated_at: Time.current)
+    raise
+  end
+
+  private
+
+  def upsert_account(connection, attributes)
+    account = Account.find_or_initialize_by(connection: connection, foreign_id: attributes[:foreign_id])
+    account.assign_attributes(attributes.except(:foreign_id))
+    # An account a connector created is one a connector maintains.
+    account.positions_source = "connection"
+    account.name = account.foreign_id if account.name.blank?
+    account.save!
+    account
+  end
+
+  def sync_positions(connector, connection, account, as_of)
+    as_of ||= account.positions_as_of || Time.current
+    rows = connector.positions(connection, account)
+
+    cash = connector.cash(connection, account)
+    account.update_column(:cash, cash)
+
+    asset_ids = rows.map do |row|
+      position = Position.find_or_initialize_by(
+        account_id: account.id, asset_id: asset_for(row).id, as_of: as_of
+      )
+      position.units = row[:units]
+      position.price = row[:price]
+      position.average_price = row[:average_price]
+      position.currency = row[:currency] || "USD"
+      position.save!
+      position.asset_id
+    end
+
+    asset_ids << cash_position(account, cash, as_of).asset_id if cash&.nonzero?
+
+    # Anything the institution no longer reports.
+    Position.where(account_id: account.id, as_of: as_of).where.not(asset_id: asset_ids).delete_all
+
+    account.update!(positions_as_of: as_of)
+  end
+
+  # Uninvested cash rides along as a position against a cash asset, so it shows
+  # up in the treemap and the account total without anything special-casing it.
+  def cash_position(account, cash, as_of)
+    asset = Asset.find_or_create_by!(symbol: "USD") { |a| a.type = "cash"; a.name = "US Dollar" }
+    position = Position.find_or_initialize_by(account_id: account.id, asset_id: asset.id, as_of: as_of)
+    position.units = cash
+    position.price = 1.0
+    position.save!
+    position
+  end
+
+  def asset_for(row)
+    asset = Asset.find_or_create_by!(symbol: row[:symbol])
+    attributes = {
+      name: asset.name.presence || row[:name],
+      type: asset.type.presence || row[:type],
+      figi_code: asset.figi_code.presence || row[:figi_code],
+      exchange: asset.exchange || exchange_for(row[:exchange_mic])
+    }.compact
+    asset.update!(attributes) if attributes.any? { |key, value| asset.public_send(key) != value }
+    asset
+  end
+
+  # Positions carry a MIC ("XNAS"), not the short code the seed list is keyed by.
+  def exchange_for(mic_code)
+    return if mic_code.blank?
+    Exchange.find_by(mic_code: mic_code) || Exchange.find_by(code: mic_code)
+  end
+
+  def sync_transactions(connector, connection, account)
+    connector.transactions(connection, account, since: connection.synced_at).each do |row|
+      transaction = Transaction.find_or_initialize_by(account_id: account.id, foreign_id: row[:foreign_id])
+      transaction.assign_attributes(row.except(:foreign_id))
+      # A cash movement has no instrument behind it; park it against the cash
+      # asset so transaction.asset is always something.
+      transaction.symbol = "USD" if transaction.symbol.blank? && transaction.asset_id.nil?
+      transaction.save!
+    end
+  end
+end
