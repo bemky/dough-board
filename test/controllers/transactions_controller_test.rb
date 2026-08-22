@@ -5,8 +5,9 @@ class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
     sign_in
     @account = Account.create!(provider: "Robinhood", name: "Import Test")
     # Pre-create the assets with freshly-cached splits so Transaction#save does
-    # not hit the network (load_splits short-circuits when splits_updated_at is
-    # recent; quotes are only fetched when reading price, not on save).
+    # not queue a LoadSplitsJob (the create callback short-circuits when
+    # splits_updated_at is recent; quotes are only fetched when reading price,
+    # not on save).
     %w[SCTY TSLA].each do |sym|
       Asset.create!(symbol: sym, splits_updated_at: Time.current)
     end

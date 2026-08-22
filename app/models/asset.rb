@@ -53,6 +53,10 @@ class Asset < ApplicationRecord
       self.splits.find{|split| split.split_at == data[0]} || Split.create(asset: self, split_at: data[0], ratio: data[1])
     end
     touch(:splits_updated_at)
+    # Split.create above doesn't append to an already-loaded association, so
+    # callers reading `asset.splits` afterward (LoadSplitsJob) would otherwise
+    # still see the pre-scrape set.
+    self.splits.reset
     splits
   end
 
@@ -63,15 +67,10 @@ class Asset < ApplicationRecord
   # Dropping the splits alone isn't enough: adjusted_quantity is computed once
   # at save time and set_adjusted_quantity won't redo the work unless forced,
   # so transactions would keep applying the old symbol's ratios indefinitely.
-  # Handing each transaction this same instance means load_splits scrapes the
-  # new symbol once rather than once per row.
+  # LoadSplitsJob rescrapes and recomputes them off-request.
   private def reset_splits
     splits.destroy_all
     update_column(:splits_updated_at, nil)
-
-    transactions.each do |transaction|
-      transaction.asset = self
-      transaction.set_adjusted_quantity!(true)
-    end
+    LoadSplitsJob.perform_later(self)
   end
 end

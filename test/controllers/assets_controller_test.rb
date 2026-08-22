@@ -3,7 +3,7 @@ require "test_helper"
 class AssetsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in
-    # splits_updated_at keeps load_splits from hitting the network on save.
+    # splits_updated_at keeps the create callback from queuing a LoadSplitsJob.
     @asset = Asset.create!(symbol: "SCTY", splits_updated_at: Time.current)
   end
 

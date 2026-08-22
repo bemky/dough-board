@@ -50,8 +50,10 @@ alongside `config.credentials.content_path = Rails.root.join("config", "credenti
 
 **Model layer does the fetching automatically.** The `type` column on `Asset` and `Transaction` is a plain string, not Rails STI — both models set `self.inheritance_column = nil` to disable STI while keeping a `type` attribute (`Asset` type ∈ stock/fund/crypto, `Transaction` type ∈ buy/sale).
 - `Quote` has a `before_validation :fetch` that lazily populates `price`/`quoted_at` from Finnhub. When Finnhub returns no price (unknown symbol, rate limit), `fetch` does `throw :abort` so the blank Quote is **not** persisted. `Asset#current_quote` returns a cached quote if one is <24h old, otherwise **creates a new Quote** (triggering a fetch). Reading `asset.price` can therefore hit the network.
-- `Asset#load_splits` caches scraped splits for 24h via the `splits_updated_at` timestamp.
-- `Transaction` auto-creates its `Asset` from a virtual `symbol` accessor (`before_validation :create_asset`) and computes `adjusted_quantity` (`before_save`) by multiplying `quantity` through every split that occurred after `executed_at`.
+- `Asset#load_splits` caches scraped splits for 24h via the `splits_updated_at` timestamp. It is called from `LoadSplitsJob`, not from a request: saving a transaction never blocks on the scraper.
+- `Transaction` auto-creates its `Asset` from a virtual `symbol` accessor (`before_validation :create_asset`) and computes `adjusted_quantity` (`before_save`) by multiplying `quantity` through every split **already on hand** that occurred after `executed_at`. `after_create_commit` then enqueues `LoadSplitsJob` (skipped while `splits_updated_at` is <24h old, so an import of many rows for one symbol queues one job), which rescrapes and force-recomputes `adjusted_quantity` for every transaction against that asset. A transaction is therefore briefly unadjusted between save and job completion.
+- Editing an `Asset` invalidates what its identity implies: `after_update` clears cached `quotes` when `symbol` or `type` changes (both feed `quote_symbol`), and on a `symbol` change also drops `splits` and enqueues `LoadSplitsJob`.
+- No queue backend is configured, so ActiveJob runs on the default in-process `:async` adapter — jobs are lost on restart/deploy, leaving `adjusted_quantity` unadjusted until that asset's next transaction save.
 
 **Portfolio aggregation** lives in `TransactionsController#index`: it folds buys/sales into per-symbol quantities using `adjusted_quantity`, then values each holding against the asset's current price.
 

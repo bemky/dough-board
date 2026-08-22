@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AssetTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @asset = Asset.create!(symbol: "SCTY", type: "stock", splits_updated_at: Time.current)
     @quote = Quote.create!(asset: @asset, price: 49.71, quoted_at: Time.current)
@@ -16,15 +18,21 @@ class AssetTest < ActiveSupport::TestCase
     scraper.singleton_class.remove_method(:splits)
   end
 
-  test "changing symbol clears splits and recomputes adjusted quantity" do
+  test "changing symbol clears splits and queues a rescrape" do
     account = Account.create!(provider: "Robinhood", name: "Model Test")
     Split.create!(asset: @asset, split_at: Date.new(2016, 1, 1), ratio: 2)
     transaction = Transaction.create!(account: account, asset: @asset, type: "buy",
       executed_at: Date.new(2015, 1, 1), quantity: 10, value: 100, adjusted_quantity: 20)
 
+    assert_enqueued_with job: LoadSplitsJob, args: [@asset] do
+      @asset.update!(symbol: "TSLA")
+    end
+    assert_empty @asset.splits.reload
+    assert_nil @asset.reload.splits_updated_at
+
     # The new symbol has a 3-for-1 after the execution date, not the old 2-for-1.
     with_scraped_splits([[DateTime.new(2016, 6, 1), 3.0]]) do
-      @asset.update!(symbol: "TSLA")
+      perform_enqueued_jobs
     end
 
     assert_equal [3.0], @asset.splits.reload.map(&:ratio)
