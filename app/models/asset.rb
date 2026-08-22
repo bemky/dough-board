@@ -9,7 +9,18 @@ class Asset < ApplicationRecord
 
   validates :type, inclusion: {in: %w(stock fund crypto), allow_nil: true}
   validates :exchange, inclusion: {in: %w(nyse nasdaq), allow_nil: true}
-  
+
+  # Both symbol and type feed #quote_symbol — type decides whether the request
+  # goes out as "BTC" or "BINANCE:BTCUSDT" — so changing either means the cached
+  # quotes priced a different instrument. Drop them; the next #current_quote
+  # refetches.
+  after_update :clear_quotes, if: -> { saved_change_to_symbol? || saved_change_to_type? }
+
+  # Splits are scraped by symbol, so a new symbol invalidates them — and with
+  # them every transaction's cached adjusted_quantity.
+  after_update :reset_splits, if: -> { saved_change_to_symbol? }
+
+
   def price
     current_quote&.price
   end
@@ -43,5 +54,24 @@ class Asset < ApplicationRecord
     end
     touch(:splits_updated_at)
     splits
+  end
+
+  private def clear_quotes
+    quotes.destroy_all
+  end
+
+  # Dropping the splits alone isn't enough: adjusted_quantity is computed once
+  # at save time and set_adjusted_quantity won't redo the work unless forced,
+  # so transactions would keep applying the old symbol's ratios indefinitely.
+  # Handing each transaction this same instance means load_splits scrapes the
+  # new symbol once rather than once per row.
+  private def reset_splits
+    splits.destroy_all
+    update_column(:splits_updated_at, nil)
+
+    transactions.each do |transaction|
+      transaction.asset = self
+      transaction.set_adjusted_quantity!(true)
+    end
   end
 end
