@@ -12,6 +12,7 @@
 
     <div class="flex gap-6 border-b border-gray-200">
         <%= nav_tab "Assets", account_path(account), tab == :assets %>
+        <%= nav_tab "Positions", account_positions_path(account), tab == :positions %>
         <%= nav_tab "Transactions", account_transactions_path(account), tab == :transactions %>
     </div>
 </div>

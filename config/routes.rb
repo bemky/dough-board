@@ -20,7 +20,9 @@ Rails.application.routes.draw do
 
   post "transactions/import", to: "transactions#import", as: :import_transactions
   standard_resources :transactions
+  standard_resources :positions
   standard_resources :accounts do
     resources :transactions, only: [:index]
+    resources :positions, only: [:index]
   end
 end

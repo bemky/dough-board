@@ -1,0 +1,23 @@
+<div class="p-8 space-y-8">
+    <% if @account %>
+        <%= render partial: 'accounts/header', locals: {account: @account, tab: :positions} %>
+
+        <%= render partial: 'positions/table', locals: {
+            positions: @positions,
+            show_account: false,
+            empty_message: "No positions for this account."
+        } %>
+    <% else %>
+        <div class="flex gap-8">
+            <div class="flex-1">
+                <%= render partial: 'positions/table', locals: {positions: @positions} %>
+            </div>
+            <div class="w-80 shrink-0 space-y-8">
+                <div class="rounded-xl bg-gray-100 p-8">
+                    <h3 class="mb-4 text-lg font-semibold">Add Position</h3>
+                    <%= render partial: 'positions/form', locals: {position: Position.new} %>
+                </div>
+            </div>
+        </div>
+    <% end %>
+</div>

@@ -2,8 +2,12 @@
 #
 # Accounts fed by a connector get their positions from the brokerage, which
 # knows about corporate actions and transfers we never see. Accounts filled in
-# by hand or from a CSV have only their transactions, so this reconstructs the
-# same shape from them — the portfolio then reads one table either way.
+# from a CSV have only their transactions, so this reconstructs the same shape
+# from them — the portfolio then reads one table either way.
+#
+# Accounts whose positions are maintained by hand are left entirely alone: this
+# job rewrites and prunes the whole snapshot, so there is no such thing as
+# partially owning one.
 class DerivePositionsJob < ApplicationJob
   queue_as :default
 
@@ -15,6 +19,8 @@ class DerivePositionsJob < ApplicationJob
   # of rows from writing hundreds of points into the history. The periodic rake
   # task passes a timestamp to append a new point instead.
   def perform(account, as_of: nil)
+    return unless account.derives_positions?
+
     as_of ||= account.positions_as_of || Time.current
 
     # Deliberately not `account.transactions` — an Account handed to two runs in

@@ -98,8 +98,68 @@ class DerivePositionsJobTest < ActiveSupport::TestCase
     assert_equal [@asset], @account.current_positions.map(&:asset)
   end
 
+  test "a hand-maintained account is left entirely alone" do
+    buy(quantity: 10)
+    DerivePositionsJob.perform_now(@account)
+    assert_equal 1, @account.current_positions.count
+
+    @account.update!(positions_source: "manual")
+    manual = Position.create!(account: @account.reload, asset: @other, units: 42, price: 3.0)
+    buy(asset: @asset, quantity: 5)
+
+    DerivePositionsJob.perform_now(@account.reload)
+
+    # Neither rewritten from the new transaction nor pruned.
+    assert_in_delta 10, @account.current_positions.find_by(asset: @asset).units, 0.001
+    assert_in_delta 42, manual.reload.units, 0.001
+  end
+
+  test "a hand-maintained account is not snapshotted by the job" do
+    @account.update!(positions_source: "manual")
+    Position.create!(account: @account.reload, asset: @asset, units: 42)
+    as_of = @account.reload.positions_as_of
+
+    DerivePositionsJob.perform_now(@account, as_of: as_of + 1.hour)
+
+    assert_equal as_of, @account.reload.positions_as_of
+    assert_equal 1, @account.positions.count
+  end
+
+  # Switching to hand-maintained keeps whatever was derived, so the holdings
+  # already worked out become the starting point rather than being thrown away.
+  test "switching an account to manual freezes its current snapshot" do
+    buy(quantity: 10)
+    DerivePositionsJob.perform_now(@account)
+    @account.update!(positions_source: "manual")
+
+    buy(quantity: 90)
+    DerivePositionsJob.perform_now(@account.reload)
+
+    assert_in_delta 10, @account.current_positions.sole.units, 0.001
+  end
+
+  test "switching back to transactions hands the snapshot over again" do
+    @account.update!(positions_source: "manual")
+    Position.create!(account: @account.reload, asset: @other, units: 42)
+
+    @account.update!(positions_source: "transactions")
+    buy(asset: @asset, quantity: 7)
+    DerivePositionsJob.perform_now(@account.reload)
+
+    assert_equal [@asset], @account.current_positions.map(&:asset)
+    assert_in_delta 7, @account.current_positions.sole.units, 0.001
+  end
+
   test "saving a transaction queues a derivation for its account" do
     assert_enqueued_with job: DerivePositionsJob, args: [@account] do
+      buy
+    end
+  end
+
+  test "saving a transaction on a hand-maintained account queues nothing" do
+    @account.update!(positions_source: "manual")
+
+    assert_no_enqueued_jobs only: DerivePositionsJob do
       buy
     end
   end
