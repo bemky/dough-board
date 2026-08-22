@@ -19,6 +19,15 @@ bin/rails test:system           # Capybara/Selenium system tests
 ```
 
 ```bash
+bin/rails reference:exchanges   # fill the exchanges table (once, after setup)
+bin/rails connections:discover  # pick up connections made on the provider's site
+bin/rails connections:sync      # sync every active connection now
+bin/rails positions:derive      # snapshot accounts fed by their transactions
+```
+
+`reference:exchanges` is the **only** writer of the `exchanges` table — migrations create just the two rows the pre-existing `assets.exchange` strings referred to. Run it once at setup, or assets sync with a null exchange until you do.
+
+```bash
 bin/dev                         # run web + JS watcher + CSS watcher (Procfile.dev)
 ```
 
