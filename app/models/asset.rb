@@ -1,19 +1,21 @@
 class Asset < ApplicationRecord
   self.inheritance_column = nil
 
+  belongs_to :exchange, optional: true
+
   has_many :transactions
   has_many :quotes, -> { order(quoted_at: :desc)}, dependent: :destroy
   has_many :splits
-  
+
   normalizes :symbol, with: -> symbol { symbol.upcase }
 
-  # Both validate with allow_nil, but a form's blank select option submits "",
-  # which is neither nil nor a listed value — without this, saving an asset that
-  # has no exchange fails validation on a field the user never touched.
-  normalizes :type, :exchange, with: -> value { value.presence }
+  # The type select validates with allow_nil, but a form's blank option submits
+  # "", which is neither nil nor a listed value — without this, saving an asset
+  # whose type was never touched fails validation on it.
+  normalizes :type, with: -> value { value.presence }
 
   validates :type, inclusion: {in: %w(stock fund crypto), allow_nil: true}
-  validates :exchange, inclusion: {in: %w(nyse nasdaq), allow_nil: true}
+  validates :symbol, uniqueness: true
 
   # Both symbol and type feed #quote_symbol — type decides whether the request
   # goes out as "BTC" or "BINANCE:BTCUSDT" — so changing either means the cached
