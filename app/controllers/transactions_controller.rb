@@ -1,5 +1,5 @@
 class TransactionsController < ApplicationController
-  
+
   PER_PAGE_OPTIONS = [20, 50, 100, 250].freeze
 
   # Nested under /accounts/:account_id/transactions this renders one account's
@@ -52,49 +52,53 @@ class TransactionsController < ApplicationController
 
     created = updated = skipped = errored = 0
 
-    CSV.parse(params[:file].read, headers: true).each do |row|
-      if row["asset_type"] == "option"
-        skipped += 1
-        next
-      end
+    Transaction.without_position_derivation do
+      CSV.parse(params[:file].read, headers: true).each do |row|
+        if row["asset_type"] == "option"
+          skipped += 1
+          next
+        end
 
-      side = SIDE_MAP[row["side"]]
-      unless side
-        skipped += 1
-        next
-      end
+        side = SIDE_MAP[row["side"]]
+        unless side
+          skipped += 1
+          next
+        end
 
-      # A blank order_id can't identify a row, and matching on it would find
-      # any one transaction with a null foreign_id — collapsing every ID-less
-      # row onto each other and over hand-entered transactions. Always create.
-      foreign_id = row["order_id"].presence
-      transaction = if foreign_id
-        Transaction.find_or_initialize_by(account_id: params[:account_id], foreign_id: foreign_id)
-      else
-        Transaction.new(account_id: params[:account_id])
-      end
-      new_record = transaction.new_record?
-
-      transaction.assign_attributes(
-        symbol: row["symbol"],
-        type: side,
-        executed_at: row["fill_date"],
-        quantity: row["quantity"],
-        value: row["gross_amount"]
-      )
-
-      begin
-        if transaction.save
-          new_record ? created += 1 : updated += 1
+        # A blank order_id can't identify a row, and matching on it would find
+        # any one transaction with a null foreign_id — collapsing every ID-less
+        # row onto each other and over hand-entered transactions. Always create.
+        foreign_id = row["order_id"].presence
+        transaction = if foreign_id
+          Transaction.find_or_initialize_by(account_id: params[:account_id], foreign_id: foreign_id)
         else
+          Transaction.new(account_id: params[:account_id])
+        end
+        new_record = transaction.new_record?
+
+        transaction.assign_attributes(
+          symbol: row["symbol"],
+          type: side,
+          executed_at: row["fill_date"],
+          quantity: row["quantity"],
+          value: row["gross_amount"]
+        )
+
+        begin
+          if transaction.save
+            new_record ? created += 1 : updated += 1
+          else
+            errored += 1
+          end
+        rescue => e
+          # One symbol's quote/split fetch failing must not abort the whole import.
+          Rails.logger.warn("Import row failed (#{row["symbol"]} #{row["order_id"]}): #{e.class}: #{e.message}")
           errored += 1
         end
-      rescue => e
-        # One symbol's quote/split fetch failing must not abort the whole import.
-        Rails.logger.warn("Import row failed (#{row["symbol"]} #{row["order_id"]}): #{e.class}: #{e.message}")
-        errored += 1
       end
     end
+
+    DerivePositionsJob.perform_later(Account.find(params[:account_id]))
 
     notice = "Import complete: #{created} created, #{updated} updated, " \
              "#{skipped} skipped, #{errored} errored."
