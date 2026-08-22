@@ -4,6 +4,7 @@ class Asset < ApplicationRecord
   belongs_to :exchange, optional: true
 
   has_many :transactions
+  has_many :positions, dependent: :delete_all
   has_many :quotes, -> { order(quoted_at: :desc)}, dependent: :destroy
   has_many :splits
 
@@ -14,7 +15,7 @@ class Asset < ApplicationRecord
   # whose type was never touched fails validation on it.
   normalizes :type, with: -> value { value.presence }
 
-  validates :type, inclusion: {in: %w(stock fund crypto), allow_nil: true}
+  validates :type, inclusion: {in: %w(stock fund crypto cash), allow_nil: true}
   validates :symbol, uniqueness: true
 
   # Both symbol and type feed #quote_symbol — type decides whether the request
@@ -28,7 +29,15 @@ class Asset < ApplicationRecord
   after_update :reset_splits, if: -> { saved_change_to_symbol? }
 
 
+  # A cash balance is carried as a position against a cash asset so it shows up
+  # in the treemap and account totals like anything else. It is worth its face
+  # value; there is nothing to quote.
+  def cash?
+    type == "cash"
+  end
+
   def price
+    return 1.0 if cash?
     current_quote&.price
   end
 
@@ -51,6 +60,7 @@ class Asset < ApplicationRecord
   end
 
   def cached_price
+    return 1.0 if cash?
     cached_quote&.price
   end
   

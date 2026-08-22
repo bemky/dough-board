@@ -10,18 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_120200) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "institution_name"
     t.string "name", null: false
     t.string "number"
+    t.datetime "positions_as_of"
     t.datetime "updated_at", null: false
   end
 
   create_table "assets", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "exchange_id"
+    t.string "figi_code"
     t.string "name"
     t.datetime "splits_updated_at"
     t.string "symbol", null: false
@@ -42,6 +44,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_120200) do
     t.string "timezone"
     t.datetime "updated_at", null: false
     t.index ["code"], name: "index_exchanges_on_code", unique: true
+  end
+
+  create_table "positions", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.datetime "as_of", null: false
+    t.integer "asset_id", null: false
+    t.float "average_price"
+    t.float "cost_basis"
+    t.datetime "created_at", null: false
+    t.string "currency", default: "USD", null: false
+    t.float "open_pnl"
+    t.float "price"
+    t.float "units", null: false
+    t.datetime "updated_at", null: false
+    t.float "value"
+    t.index ["account_id", "asset_id", "as_of"], name: "index_positions_on_account_id_and_asset_id_and_as_of", unique: true
+    t.index ["account_id"], name: "index_positions_on_account_id"
+    t.index ["asset_id", "as_of"], name: "index_positions_on_asset_id_and_as_of"
+    t.index ["asset_id"], name: "index_positions_on_asset_id"
   end
 
   create_table "quotes", force: :cascade do |t|
@@ -79,5 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_120200) do
   end
 
   add_foreign_key "assets", "exchanges"
+  add_foreign_key "positions", "accounts"
+  add_foreign_key "positions", "assets"
   add_foreign_key "transactions", "accounts"
 end
