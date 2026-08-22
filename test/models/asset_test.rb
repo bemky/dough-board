@@ -19,7 +19,7 @@ class AssetTest < ActiveSupport::TestCase
   end
 
   test "changing symbol clears splits and queues a rescrape" do
-    account = Account.create!(provider: "Robinhood", name: "Model Test")
+    account = Account.create!(institution_name: "Robinhood", name: "Model Test")
     Split.create!(asset: @asset, split_at: Date.new(2016, 1, 1), ratio: 2)
     transaction = Transaction.create!(account: account, asset: @asset, type: "buy",
       executed_at: Date.new(2015, 1, 1), quantity: 10, value: 100, adjusted_quantity: 20)
@@ -52,7 +52,7 @@ class AssetTest < ActiveSupport::TestCase
   end
 
   test "changing an unrelated attribute keeps cached quotes" do
-    @asset.update!(name: "SolarCity", exchange: "nasdaq")
+    @asset.update!(name: "SolarCity", exchange: Exchange.create!(code: "NASDAQ", name: "Nasdaq Stock Market"))
     assert_equal [@quote.id], @asset.quotes.reload.map(&:id)
   end
 

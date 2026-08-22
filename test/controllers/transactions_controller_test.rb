@@ -3,7 +3,7 @@ require "test_helper"
 class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
   setup do
     sign_in
-    @account = Account.create!(provider: "Robinhood", name: "Import Test")
+    @account = Account.create!(institution_name: "Robinhood", name: "Import Test")
     # Pre-create the assets with freshly-cached splits so Transaction#save does
     # not queue a LoadSplitsJob (the create callback short-circuits when
     # splits_updated_at is recent; quotes are only fetched when reading price,

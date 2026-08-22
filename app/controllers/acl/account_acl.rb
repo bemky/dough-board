@@ -4,7 +4,7 @@ module AccountACL
     [
       :name,
       :number,
-      :provider
+      :institution_name
     ]
   end
 

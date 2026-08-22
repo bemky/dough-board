@@ -1,7 +1,7 @@
 <div class="space-y-6">
     <div class="flex items-start justify-between">
         <div>
-            <div class="font-bold uppercase text-gray-500"><%= account.provider %></div>
+            <div class="font-bold uppercase text-gray-500"><%= account.institution_name %></div>
             <h1 class="text-2xl font-bold"><%= account.name %></h1>
             <% if account.number.present? %>
                 <div class="text-sm text-gray-500">#<%= account.number %></div>

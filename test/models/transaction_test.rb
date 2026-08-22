@@ -4,7 +4,7 @@ class TransactionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
   setup do
-    @account = Account.create!(provider: "Robinhood", name: "Model Test")
+    @account = Account.create!(institution_name: "Robinhood", name: "Model Test")
     @asset = Asset.create!(symbol: "SCTY")
   end
 

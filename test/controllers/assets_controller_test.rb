@@ -5,6 +5,7 @@ class AssetsControllerTest < ActionDispatch::IntegrationTest
     sign_in
     # splits_updated_at keeps the create callback from queuing a LoadSplitsJob.
     @asset = Asset.create!(symbol: "SCTY", splits_updated_at: Time.current)
+    @nasdaq = Exchange.create!(code: "NASDAQ", name: "Nasdaq Stock Market")
   end
 
   test "edit renders the form for the asset" do
@@ -14,19 +15,19 @@ class AssetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update persists permitted attributes and returns to the portfolio" do
-    patch asset_path(@asset), params: {asset: {name: "SolarCity", type: "stock", exchange: "nasdaq"}}
+    patch asset_path(@asset), params: {asset: {name: "SolarCity", type: "stock", exchange_id: @nasdaq.id}}
     assert_redirected_to assets_path
 
     @asset.reload
     assert_equal "SolarCity", @asset.name
     assert_equal "stock", @asset.type
-    assert_equal "nasdaq", @asset.exchange
+    assert_equal @nasdaq, @asset.exchange
   end
 
   # The form's selects carry a blank option, so untouched optional fields come
   # back as "" — which allow_nil does not cover.
   test "update accepts the blank selects the form submits" do
-    patch asset_path(@asset), params: {asset: {symbol: "SCTY", name: "", type: "crypto", exchange: ""}}
+    patch asset_path(@asset), params: {asset: {symbol: "SCTY", name: "", type: "crypto", exchange_id: ""}}
     assert_redirected_to assets_path
 
     @asset.reload

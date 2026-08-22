@@ -10,23 +10,38 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_20_141429) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_120200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "institution_name"
     t.string "name", null: false
     t.string "number"
-    t.string "provider"
     t.datetime "updated_at", null: false
   end
 
   create_table "assets", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "exchange"
+    t.integer "exchange_id"
     t.string "name"
     t.datetime "splits_updated_at"
     t.string "symbol", null: false
     t.string "type"
     t.datetime "updated_at", null: false
+    t.index ["exchange_id"], name: "index_assets_on_exchange_id"
+    t.index ["symbol"], name: "index_assets_on_symbol", unique: true
+  end
+
+  create_table "exchanges", force: :cascade do |t|
+    t.string "close_time"
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "mic_code"
+    t.string "name", null: false
+    t.string "start_time"
+    t.string "suffix"
+    t.string "timezone"
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_exchanges_on_code", unique: true
   end
 
   create_table "quotes", force: :cascade do |t|
@@ -63,5 +78,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_141429) do
     t.index ["asset_id"], name: "index_transactions_on_asset_id"
   end
 
+  add_foreign_key "assets", "exchanges"
   add_foreign_key "transactions", "accounts"
 end

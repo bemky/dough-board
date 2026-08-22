@@ -8,7 +8,7 @@ module AssetACL
       :symbol,
       :name,
       :type,
-      :exchange
+      :exchange_id
     ]
   end
 
@@ -23,7 +23,7 @@ module AssetACL
   end
 
   def includes
-    {}
+    {exchange: true}
   end
 
 end

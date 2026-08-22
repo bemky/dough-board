@@ -26,7 +26,7 @@
         </div>
         <div>
             <%= f.label :exchange, class: label_classes %>
-            <%= f.select :exchange, %w(nyse nasdaq), {include_blank: true}, class: field_classes %>
+            <%= f.collection_select :exchange_id, Exchange.order(:code), :id, :label, {include_blank: true}, class: field_classes %>
         </div>
         <button type="submit" class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
             <%= asset.persisted? ? "Save" : "Add" %>
