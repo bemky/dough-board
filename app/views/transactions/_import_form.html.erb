@@ -8,6 +8,18 @@
             <span data-dropzone-label>Drag &amp; drop a CSV here, or click to browse</span>
             <%= f.file_field :file, accept: ".csv,text/csv", class: "hidden", data: {dropzone_input: true} %>
         </label>
+        <div class="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            <p class="font-medium text-gray-700">Expected columns (header row required)</p>
+            <ul class="mt-1 space-y-0.5">
+                <li><code class="font-mono text-gray-800">order_id</code> — broker's unique id; re-imports update the matching row</li>
+                <li><code class="font-mono text-gray-800">symbol</code> — ticker, e.g. <span class="font-mono">AAPL</span></li>
+                <li><code class="font-mono text-gray-800">side</code> — <span class="font-mono">buy</span>, <span class="font-mono">buy_to_open</span>, <span class="font-mono">sell</span>, or <span class="font-mono">sell_to_close</span></li>
+                <li><code class="font-mono text-gray-800">fill_date</code> — when the order executed</li>
+                <li><code class="font-mono text-gray-800">quantity</code> — shares/units</li>
+                <li><code class="font-mono text-gray-800">gross_amount</code> — total dollar value</li>
+                <li><code class="font-mono text-gray-800">asset_type</code> — optional; rows marked <span class="font-mono">option</span> are skipped</li>
+            </ul>
+        </div>
         <button type="submit" class="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
             Import
         </button>
