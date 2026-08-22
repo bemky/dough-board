@@ -1,12 +1,18 @@
 class Account < ApplicationRecord
 
   # Where this account's holdings come from — and so, who is allowed to write
-  # its positions. A connector adds a third value later; it's the same idea with
-  # something else doing the writing.
+  # its positions.
   POSITIONS_SOURCES = {
     "transactions" => "Derived from this account's transactions",
-    "manual" => "Entered and maintained by hand"
+    "manual" => "Entered and maintained by hand",
+    "connection" => "Synced from a connected institution"
   }.freeze
+
+  # The sources a person can choose. An account belongs to "connection" by
+  # virtue of a connector having created it, not by anyone picking it.
+  SELECTABLE_POSITIONS_SOURCES = POSITIONS_SOURCES.except("connection").freeze
+
+  belongs_to :connection, optional: true
 
   has_many :transactions
   has_many :positions, dependent: :delete_all
@@ -27,6 +33,10 @@ class Account < ApplicationRecord
 
   def manual_positions?
     positions_source == "manual"
+  end
+
+  def synced_positions?
+    positions_source == "connection"
   end
 
   def positions_source_description

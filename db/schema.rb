@@ -10,15 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_150000) do
   create_table "accounts", force: :cascade do |t|
+    t.float "cash"
+    t.integer "connection_id"
     t.datetime "created_at", null: false
+    t.string "foreign_id"
     t.string "institution_name"
     t.string "name", null: false
     t.string "number"
     t.datetime "positions_as_of"
     t.string "positions_source", default: "transactions", null: false
     t.datetime "updated_at", null: false
+    t.index ["connection_id", "foreign_id"], name: "index_accounts_on_connection_id_and_foreign_id", unique: true, where: "foreign_id IS NOT NULL"
+    t.index ["connection_id"], name: "index_accounts_on_connection_id"
   end
 
   create_table "assets", force: :cascade do |t|
@@ -32,6 +37,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_140000) do
     t.datetime "updated_at", null: false
     t.index ["exchange_id"], name: "index_assets_on_exchange_id"
     t.index ["symbol"], name: "index_assets_on_symbol", unique: true
+  end
+
+  create_table "connections", force: :cascade do |t|
+    t.string "connector", null: false
+    t.datetime "created_at", null: false
+    t.json "credentials"
+    t.datetime "disabled_at"
+    t.string "financial_institution"
+    t.string "financial_institution_slug"
+    t.string "foreign_id"
+    t.string "last_error"
+    t.string "name"
+    t.datetime "synced_at"
+    t.datetime "updated_at", null: false
+    t.index ["connector", "foreign_id"], name: "index_connections_on_connector_and_foreign_id", unique: true
   end
 
   create_table "exchanges", force: :cascade do |t|
@@ -100,6 +120,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_140000) do
     t.index ["asset_id"], name: "index_transactions_on_asset_id"
   end
 
+  add_foreign_key "accounts", "connections"
   add_foreign_key "assets", "exchanges"
   add_foreign_key "positions", "accounts"
   add_foreign_key "positions", "assets"
