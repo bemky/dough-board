@@ -19,7 +19,16 @@
         </div>
         <div>
             <%= f.label :account_id, "Account", class: label_classes %>
-            <%= f.collection_select :account_id, Account.order(:institution_name, :name), :id, :label, { prompt: "Select account" }, class: field_classes %>
+            <%# Only accounts whose positions are maintained by hand: on any other,
+                the next derivation would overwrite whatever is entered here. %>
+            <% accounts = Account.where(positions_source: "manual").order(:institution_name, :name) %>
+            <%= f.collection_select :account_id, accounts, :id, :label, { prompt: "Select account" }, class: field_classes %>
+            <% if accounts.empty? %>
+                <p class="mt-1 text-xs text-gray-500">
+                    No accounts keep positions by hand yet. Set an account's holdings to
+                    &ldquo;Entered and maintained by hand&rdquo; to add positions to it.
+                </p>
+            <% end %>
             <%= link_to "+ Add account", new_account_path, class: "text-xs text-gray-500 hover:text-gray-700" %>
         </div>
         <div>

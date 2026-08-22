@@ -1,9 +1,8 @@
 module PositionACL
 
-  # A position entered here is somebody's deliberate entry, so `source` is not
-  # writable — Position defaults it to "manual" and only DerivePositionsJob
-  # marks a row "derived". Letting the form set it would hand a row to the job
-  # to overwrite. `value` and `cost_basis` are derived on save.
+  # `value` and `cost_basis` are derived on save, so they're readable but never
+  # written directly. Whether a position may be edited at all is a property of
+  # its account (Account#manual_positions?), not of the row.
   def attributes
     [
       :account_id,
@@ -31,7 +30,6 @@ module PositionACL
       :price,
       :value,
       :cost_basis,
-      :source,
       {asset: [:name, :symbol]},
       {account: [:name, :institution_name]}
     ]

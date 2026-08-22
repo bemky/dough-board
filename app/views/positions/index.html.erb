@@ -2,11 +2,22 @@
     <% if @account %>
         <%= render partial: 'accounts/header', locals: {account: @account, tab: :positions} %>
 
+        <div class="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            <span class="font-semibold">Holdings:</span> <%= @account.positions_source_description %><% if @account.derives_positions? %>, and rewritten on every run — edit the transactions, not these rows<% end %>.
+        </div>
+
         <%= render partial: 'positions/table', locals: {
             positions: @positions,
             show_account: false,
             empty_message: "No positions for this account."
         } %>
+
+        <% if @account.manual_positions? %>
+            <div class="max-w-md rounded-xl bg-gray-100 p-8">
+                <h3 class="mb-4 text-lg font-semibold">Add Position</h3>
+                <%= render partial: 'positions/form', locals: {position: Position.new(account: @account)} %>
+            </div>
+        <% end %>
     <% else %>
         <div class="flex gap-8">
             <div class="flex-1">

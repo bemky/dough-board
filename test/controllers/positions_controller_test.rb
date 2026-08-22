@@ -3,7 +3,8 @@ require "test_helper"
 class PositionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in
-    @account = Account.create!(institution_name: "Robinhood", name: "Brokerage")
+    @account = Account.create!(institution_name: "Robinhood", name: "Brokerage",
+      positions_source: "manual")
     @asset = Asset.create!(symbol: "SCTY", splits_updated_at: Time.current)
     @as_of = Time.current.change(usec: 0)
     @account.update!(positions_as_of: @as_of)
@@ -54,7 +55,7 @@ class PositionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to positions_path
   end
 
-  test "create takes a symbol and defaults to manual" do
+  test "create takes a symbol" do
     assert_difference "Position.count", 1 do
       post positions_path, params: {position: {
         account_id: @account.id, symbol: "TSLA", units: 4, price: 100.0
@@ -63,20 +64,24 @@ class PositionsControllerTest < ActionDispatch::IntegrationTest
     position = Position.order(:id).last
     assert_redirected_to position_path(position)
     assert_equal "TSLA", position.asset.symbol
-    assert_equal "manual", position.source
     assert_equal @as_of, position.as_of
     assert_in_delta 400.0, position.value, 0.001
   end
 
-  test "create cannot pass itself off as derived" do
-    post positions_path, params: {position: {
-      account_id: @account.id, symbol: "TSLA", units: 4, source: "derived"
-    }}
-    assert_equal "manual", Position.order(:id).last.source
+  # A position on a derived account would be gone on the job's next run, so the
+  # form never offers one.
+  test "the account select lists only hand-maintained accounts" do
+    derived = Account.create!(institution_name: "Fidelity", name: "Derived")
+
+    get new_position_path
+    assert_response :success
+    assert_select "option[value=?]", @account.id.to_s
+    assert_select "option[value=?]", derived.id.to_s, count: 0
   end
 
   test "creating for an account with no snapshot establishes one" do
-    account = Account.create!(institution_name: "Vanguard", name: "IRA")
+    account = Account.create!(institution_name: "Vanguard", name: "IRA",
+      positions_source: "manual")
     post positions_path, params: {position: {account_id: account.id, symbol: "VTI", units: 2}}
 
     position = Position.order(:id).last
@@ -100,13 +105,28 @@ class PositionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a derived position offers no edit link" do
-    @position.update!(source: "derived")
+  test "a derived account's positions offer no edit link" do
+    @account.update!(positions_source: "transactions")
 
     get positions_path
     assert_response :success
     assert_select "a[href=?]", edit_position_path(@position), count: 0
-    assert_select "span", text: "derived"
+  end
+
+  test "a derived account's positions tab says where its holdings come from" do
+    @account.update!(positions_source: "transactions")
+
+    get account_positions_path(@account)
+    assert_response :success
+    assert_select "div", text: /Derived from this account's transactions/
+    assert_select "input[name=?]", "position[symbol]", count: 0
+  end
+
+  test "a hand-maintained account's positions tab offers an add form" do
+    get account_positions_path(@account)
+    assert_response :success
+    assert_select "div", text: /Entered and maintained by hand/
+    assert_select "input[name=?]", "position[symbol]"
   end
 
   test "a manual position offers an edit link" do
