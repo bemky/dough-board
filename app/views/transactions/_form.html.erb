@@ -18,7 +18,7 @@
         </div>
         <div>
             <%= f.label :type, class: label_classes %>
-            <%= f.select :type, %w(buy sale), {}, class: field_classes %>
+            <%= f.select :type, Transaction::TYPES, {}, class: field_classes %>
         </div>
         <div>
             <%= f.label :quantity, class: label_classes %>

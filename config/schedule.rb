@@ -11,3 +11,9 @@ set :output, "log/cron.log"
 every 30.minutes do
   rake "quotes:refresh_all"
 end
+
+# Repricing the holdings against those quotes, and adding a point to the value
+# history. Offset from the refresh above so it reads warm quotes.
+every 1.hour, at: 5 do
+  rake "positions:derive"
+end

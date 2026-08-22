@@ -1,7 +1,7 @@
 <div class="p-8 space-y-8">
     <%= render partial: 'accounts/header', locals: {account: @account, tab: :assets} %>
 
-    <% portfolio = @account.transactions.portfolio %>
+    <% portfolio = @account.portfolio %>
 
     <%= render partial: 'transactions/portfolio', locals: {portfolio: portfolio} %>
 

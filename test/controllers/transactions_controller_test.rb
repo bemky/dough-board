@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
   setup do
     sign_in
     @account = Account.create!(institution_name: "Robinhood", name: "Import Test")
@@ -85,6 +87,14 @@ class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
 
     patch transaction_path(txn), params: {transaction: {foreign_id: "new-id"}}
     assert_equal "new-id", txn.reload.foreign_id
+  end
+
+  # Positions are folded per account, not per row — an import of hundreds of
+  # rows should still only ask for one.
+  test "import queues exactly one position derivation" do
+    assert_enqueued_jobs 1, only: DerivePositionsJob do
+      post import_transactions_path, params: {account_id: @account.id, file: upload}
+    end
   end
 
   test "rejects import without account or file" do

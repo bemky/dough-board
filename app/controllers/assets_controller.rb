@@ -1,8 +1,9 @@
 class AssetsController < ApplicationController
 
-  # Holdings across every account: transactions folded into per-asset positions.
+  # Holdings across every account: each account's newest position snapshot,
+  # summed per asset.
   def index
-    @portfolio = Transaction.portfolio.sort_by{|h| -h[:value]}
+    @portfolio = Position.current.portfolio.sort_by{|h| -h[:value]}
   end
 
   # standardapi provides update but no edit action, so define one that populates

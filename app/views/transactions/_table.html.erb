@@ -27,7 +27,9 @@
     <% transactions.each do |transaction| %>
         <tr class="border-b border-gray-100">
             <td class="py-2 pr-4">
-                <span class="uppercase text-xs font-bold <%= transaction.type == "buy" ? "text-green-600" : "text-red-600" %>"><%= transaction.type %></span>
+                <%# Green adds units, red removes them, gray moves cash rather than shares. %>
+                <% type_color = {1 => "text-green-600", -1 => "text-red-600"}.fetch(Transaction::UNIT_SIGNS[transaction.type], "text-gray-500") %>
+                <span class="uppercase text-xs font-bold <%= type_color %>"><%= transaction.type.tr("_", " ") %></span>
             </td>
             <td class="py-2 pr-4"><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
             <td class="py-2 pr-4"><%= transaction.asset.symbol %></td>
