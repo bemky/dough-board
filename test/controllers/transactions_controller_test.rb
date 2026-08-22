@@ -5,8 +5,9 @@ class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
     sign_in
     @account = Account.create!(provider: "Robinhood", name: "Import Test")
     # Pre-create the assets with freshly-cached splits so Transaction#save does
-    # not hit the network (load_splits short-circuits when splits_updated_at is
-    # recent; quotes are only fetched when reading price, not on save).
+    # not queue a LoadSplitsJob (the create callback short-circuits when
+    # splits_updated_at is recent; quotes are only fetched when reading price,
+    # not on save).
     %w[SCTY TSLA].each do |sym|
       Asset.create!(symbol: sym, splits_updated_at: Time.current)
     end
@@ -20,9 +21,16 @@ class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
     2020-12-28,ABNB 75P 2023-01-20,option,buy_to_open,1,16.30,1630.00,0,-1630.00,limit,user,order-opt
   CSV
 
-  def upload
+  # Same columns, but no order_id on either row.
+  CSV_WITHOUT_IDS = <<~CSV
+    fill_date,symbol,asset_type,side,quantity,avg_price,gross_amount,fees,net_cash,order_type,source,order_id
+    2015-03-18,SCTY,equity,buy,10,49.71,497.10,0,-497.10,market,user,
+    2020-01-02,TSLA,equity,sell,2,195.16,390.34,0,390.34,market,user,
+  CSV
+
+  def upload(body = CSV_BODY)
     file = Tempfile.new(["trades", ".csv"])
-    file.write(CSV_BODY)
+    file.write(body)
     file.rewind
     Rack::Test::UploadedFile.new(file.path, "text/csv")
   end
@@ -46,6 +54,23 @@ class TransactionsControllerImportTest < ActionDispatch::IntegrationTest
     # Re-import: no new rows created (dedup on account_id + foreign_id).
     assert_no_difference "Transaction.count" do
       post import_transactions_path, params: {account_id: @account.id, file: upload}
+    end
+  end
+
+  test "rows without an order_id always create, never match an existing null" do
+    existing = Transaction.create!(account: @account, asset: Asset.find_by(symbol: "SCTY"),
+      type: "buy", executed_at: "2020-01-01", quantity: 1, value: 100)
+    assert_nil existing.foreign_id
+
+    # Both ID-less rows create their own record, and neither touches `existing`.
+    assert_difference "Transaction.count", 2 do
+      post import_transactions_path, params: {account_id: @account.id, file: upload(CSV_WITHOUT_IDS)}
+    end
+    assert_equal 1, existing.reload.quantity
+
+    # Re-importing the same file duplicates, since there is no id to dedup on.
+    assert_difference "Transaction.count", 2 do
+      post import_transactions_path, params: {account_id: @account.id, file: upload(CSV_WITHOUT_IDS)}
     end
   end
 

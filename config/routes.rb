@@ -12,6 +12,10 @@ Rails.application.routes.draw do
   root "assets#index"
 
   get "assets", to: "assets#index", as: :assets
+  # Propshaft serves /assets/*, so member routes can't live under that prefix —
+  # they'd 404 in the asset middleware before reaching the controller. The
+  # helpers are still edit_asset_path/asset_path.
+  resources :assets, only: [:edit, :update], path: "holdings"
   get "quotes/:symbol", to: "assets#quote", as: :asset_quote, constraints: {symbol: /[^\/]+/}
 
   post "transactions/import", to: "transactions#import", as: :import_transactions

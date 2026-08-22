@@ -1,7 +1,5 @@
 source "https://rubygems.org"
 
-ruby "3.4.8"
-
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.1.0"
 
@@ -38,6 +36,11 @@ gem 'finnhub_ruby'
 # Writes config/schedule.rb into a crontab entry so quotes can be refreshed
 # on a schedule instead of only on demand [https://github.com/javan/whenever]
 gem "whenever", require: false
+
+# ActiveJob backend, run by the dough-board-worker@N systemd units in production
+# [https://github.com/sidekiq/sidekiq]. Connects to REDIS_URL, or
+# redis://localhost:6379/0 when that's unset.
+gem 'sidekiq'
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"

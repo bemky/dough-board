@@ -37,7 +37,8 @@ class Transaction < ApplicationRecord
 
   before_validation :create_asset
   before_save :set_adjusted_quantity
-  
+  after_create_commit :load_asset_splits
+
   # Value of this holding at the asset's current price (cached via
   # asset.current_quote), as opposed to `value` which is the value at execution.
   def current_value
@@ -58,10 +59,22 @@ class Transaction < ApplicationRecord
     self.asset = Asset.find_or_create_by(symbol: symbol)
   end
   
+  # Refresh the asset's splits off-request, then recompute this transaction's
+  # (and its siblings') adjusted_quantity. Skipped while the scrape is still
+  # fresh — importing hundreds of rows for one symbol shouldn't queue hundreds
+  # of scrapes.
+  def load_asset_splits
+    return if asset.splits_updated_at && asset.splits_updated_at > 24.hours.ago
+    LoadSplitsJob.perform_later(asset)
+  end
+
+  # Uses the splits already on hand rather than Asset#load_splits, so saving a
+  # transaction never blocks on the scraper; LoadSplitsJob fills in anything
+  # newly scraped afterward.
   def set_adjusted_quantity(force=false)
     return if self.adjusted_quantity && !force
     self.adjusted_quantity = quantity
-    asset.load_splits.each do |split|
+    asset.splits.each do |split|
       next unless split.split_at > executed_at
       self.adjusted_quantity = self.adjusted_quantity * split.ratio
     end

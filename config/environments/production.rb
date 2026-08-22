@@ -69,6 +69,11 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
+  # Jobs run in the dough-board-worker@N systemd units, not in Puma's process.
+  # Development and test stay on the default in-process adapters so neither
+  # needs a Redis running.
+  config.active_job.queue_adapter = :sidekiq
+
   # Enable DNS rebinding protection and other `Host` header attacks.
   # config.hosts = [
   #   "example.com",     # Allow requests from example.com
