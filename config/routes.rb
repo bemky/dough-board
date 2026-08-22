@@ -18,6 +18,11 @@ Rails.application.routes.draw do
   resources :assets, only: [:edit, :update], path: "holdings"
   get "quotes/:symbol", to: "assets#quote", as: :asset_quote, constraints: {symbol: /[^\/]+/}
 
+  post "connections/discover", to: "connections#discover", as: :discover_connections
+  standard_resources :connections do
+    post :sync, on: :member
+  end
+
   post "transactions/import", to: "transactions#import", as: :import_transactions
   standard_resources :transactions
   standard_resources :positions

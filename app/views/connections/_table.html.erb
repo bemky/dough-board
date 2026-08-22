@@ -1,0 +1,46 @@
+<table class="w-full border-collapse">
+    <thead>
+        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
+            <th class="py-2 pr-4"><%= sort_header "Institution", :financial_institution %></th>
+            <th class="py-2 pr-4"><%= sort_header "Connector", :connector %></th>
+            <th class="py-2 pr-4 font-semibold text-right">Accounts</th>
+            <th class="py-2 pr-4"><%= sort_header "Last Sync", :synced_at %></th>
+            <th class="py-2"></th>
+        </tr>
+    </thead>
+    <tbody>
+    <% connections.each do |connection| %>
+        <tr class="border-b border-gray-100">
+            <td class="py-2 pr-4">
+                <span class="font-semibold"><%= connection.financial_institution.presence || "Unknown" %></span>
+                <% if connection.disabled? %>
+                    <span class="ml-1 rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700">disabled</span>
+                <% end %>
+                <% if connection.name.present? %>
+                    <span class="block text-xs text-gray-500"><%= connection.name %></span>
+                <% end %>
+            </td>
+            <td class="py-2 pr-4 text-gray-500"><%= connection.connector %></td>
+            <td class="py-2 pr-4 text-right"><%= connection.accounts.size %></td>
+            <td class="py-2 pr-4 text-gray-500">
+                <% if connection.synced_at %>
+                    <%= time_ago_in_words(connection.synced_at) %> ago
+                <% else %>
+                    <span class="text-gray-400">Never</span>
+                <% end %>
+                <% if connection.last_error.present? %>
+                    <span class="block text-xs text-red-600" data-tooltip="<%= connection.last_error %>">Last sync failed</span>
+                <% end %>
+            </td>
+            <td class="py-2 text-right">
+                <%= button_to "Sync", sync_connection_path(connection),
+                    form: {class: "inline"},
+                    class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>
+            </td>
+        </tr>
+    <% end %>
+    </tbody>
+</table>
+<% if connections.empty? %>
+    <p class="text-gray-500 mt-4">No connections yet. Connect an institution on the provider's site, then Discover.</p>
+<% end %>
