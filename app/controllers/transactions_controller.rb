@@ -64,10 +64,15 @@ class TransactionsController < ApplicationController
         next
       end
 
-      transaction = Transaction.find_or_initialize_by(
-        account_id: params[:account_id],
-        foreign_id: row["order_id"]
-      )
+      # A blank order_id can't identify a row, and matching on it would find
+      # any one transaction with a null foreign_id — collapsing every ID-less
+      # row onto each other and over hand-entered transactions. Always create.
+      foreign_id = row["order_id"].presence
+      transaction = if foreign_id
+        Transaction.find_or_initialize_by(account_id: params[:account_id], foreign_id: foreign_id)
+      else
+        Transaction.new(account_id: params[:account_id])
+      end
       new_record = transaction.new_record?
 
       transaction.assign_attributes(
