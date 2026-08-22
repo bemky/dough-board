@@ -28,7 +28,7 @@ module TransactionACL
       :adjusted_quantity,
       :value,
       {asset: [:name, :symbol]},
-      {account: [:name, :provider]}
+      {account: [:name, :institution_name]}
     ]
   end
 

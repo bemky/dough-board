@@ -5,7 +5,7 @@ class SymbolFilterTest < ApplicationSystemTestCase
     sign_in
     t = Time.current
     Asset.insert_all([{symbol: "ZZZ", created_at: t, updated_at: t}, {symbol: "AAA", created_at: t, updated_at: t}])
-    account = Account.create!(name: "Test", provider: "P")
+    account = Account.create!(name: "Test", institution_name: "P")
     Transaction.insert_all(Asset.where(symbol: %w[AAA ZZZ]).map { |asset|
       {account_id: account.id, asset_id: asset.id, type: "buy", quantity: 1, adjusted_quantity: 1,
        value: 10, executed_at: t, created_at: t, updated_at: t}

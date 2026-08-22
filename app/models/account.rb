@@ -4,7 +4,7 @@ class Account < ApplicationRecord
   validates :name, presence: true
 
   def label
-    "#{provider} - #{name}"
+    "#{institution_name} - #{name}"
   end
 
   # This account's holdings, valued at current prices. Memoized because valuing
