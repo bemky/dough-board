@@ -33,6 +33,10 @@ gem 'csv'
 # Finnhub API client for stock/crypto quotes [https://github.com/Finnhub-Stock-API/finnhub-ruby]
 gem 'finnhub_ruby'
 
+# SnapTrade's own client, for read-only brokerage connections — accounts,
+# positions and activities [https://github.com/passiv/snaptrade-sdks]
+gem 'snaptrade'
+
 # Writes config/schedule.rb into a crontab entry so quotes can be refreshed
 # on a schedule instead of only on demand [https://github.com/javan/whenever]
 gem "whenever", require: false

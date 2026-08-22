@@ -136,6 +136,14 @@ GEM
     drb (2.2.3)
     erb (6.0.7)
     erubi (1.13.1)
+    faraday (2.14.3)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-multipart (1.2.0)
+      multipart-post (~> 2.0)
+    faraday-net_http (3.4.4)
+      net-http (~> 0.5)
     finnhub_ruby (2.0.6)
       json (~> 2.3)
     globalid (1.4.0)
@@ -171,6 +179,9 @@ GEM
       drb (~> 2.0)
       prism (~> 1.5)
     msgpack (1.8.4)
+    multipart-post (2.4.1)
+    net-http (0.9.1)
+      uri (>= 0.11.1)
     net-imap (0.6.6)
       date
       net-protocol
@@ -290,6 +301,9 @@ GEM
       logger (>= 1.7.0)
       rack (>= 3.2.0)
       redis-client (>= 0.29.0)
+    snaptrade (3.0.9)
+      faraday (>= 1.0.1, < 3.0)
+      faraday-multipart (~> 1.0, >= 1.0.4)
     sqlite3 (2.9.6-aarch64-linux-gnu)
     sqlite3 (2.9.6-aarch64-linux-musl)
     sqlite3 (2.9.6-arm-linux-gnu)
@@ -366,6 +380,7 @@ DEPENDENCIES
   rails (~> 8.1.0)
   selenium-webdriver
   sidekiq
+  snaptrade
   sqlite3 (>= 2.1)
   standardapi!
   tailwindcss-rails
@@ -410,6 +425,9 @@ CHECKSUMS
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   erb (6.0.7) sha256=c5ca6dc25b0ef974a44dc8f59fe847577122483b1968a38dec305c60bf91ee92
   erubi (1.13.1) sha256=a082103b0885dbc5ecf1172fede897f9ebdb745a4b97a5e8dc63953db1ee4ad9
+  faraday (2.14.3) sha256=1882247e6766615c8220b4392bf1d27f6ebb63d8e28267587cef1fb0bf37f278
+  faraday-multipart (1.2.0) sha256=7d89a949693714176f612323ca13746a2ded204031a6ba528adee788694ef757
+  faraday-net_http (3.4.4) sha256=0e78af151747ed1b00f33e25973b4bc220d7f16c00c39676817c8b12331eb588
   finnhub_ruby (2.0.6) sha256=88ae84d02ff796b27619218f67ba077e65beefee2a2916d1f3799c6259443133
   globalid (1.4.0) sha256=037f12fbf1d9d7a014d501c2d5c77356fd4ddd96d7a7991d6700bba96706f427
   i18n (1.15.2) sha256=00f9eb62412fe593b2a65a97daa75300d37abb8f7202ec748e94b6d46a9dd1b5
@@ -426,6 +444,8 @@ CHECKSUMS
   mini_mime (1.1.5) sha256=8681b7e2e4215f2a159f9400b5816d85e9d8c6c6b491e96a12797e798f8bccef
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
   msgpack (1.8.4) sha256=4411c22d350dd1c20250f7eada3cca2695438c2f769cf0782f0cd065d90a3e7b
+  multipart-post (2.4.1) sha256=9872d03a8e552020ca096adadbf5e3cb1cd1cdd6acd3c161136b8a5737cdb4a8
+  net-http (0.9.1) sha256=25ba0b67c63e89df626ed8fac771d0ad24ad151a858af2cc8e6a716ca4336996
   net-imap (0.6.6) sha256=96aa4ee50df3060203e649efc341f53480b791d49e150f2fdebf68beb141a8df
   net-pop (0.1.2) sha256=848b4e982013c15b2f0382792268763b748cce91c9e91e36b0f27ed26420dff3
   net-protocol (0.2.2) sha256=aa73e0cba6a125369de9837b8d8ef82a61849360eba0521900e2c3713aa162a8
@@ -476,6 +496,7 @@ CHECKSUMS
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
   selenium-webdriver (4.47.0) sha256=67f915b8223d2133bbaa13e92fd98854175394f086e2036a9eff4f5561fd69e4
   sidekiq (8.1.7) sha256=91ad48c7e6c32e1846bf1d5b74c27948758049b93fed0cb539f8d586c7de3415
+  snaptrade (3.0.9) sha256=7051615695c264d8eaf730e1e79cdb151e209140a8684837bf6dcaaa5f30e684
   sqlite3 (2.9.6-aarch64-linux-gnu) sha256=d8b1f7d23efd7abac285775a9566562fc7debfef79d594e3a20354406fb7907c
   sqlite3 (2.9.6-aarch64-linux-musl) sha256=3579e1c98cdc7ff5c3722847bb63ed4e1efb7ff675cb5e1e48ef2d4da5fb3bc9
   sqlite3 (2.9.6-arm-linux-gnu) sha256=33541500e3615da02afe54a9cc38b17a6985d3cf9d8b76d6d0a83002f114e7ec
