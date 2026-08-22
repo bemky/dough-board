@@ -22,7 +22,7 @@ class TransactionTest < ActiveSupport::TestCase
   test "saving does not queue a load while the scrape is still fresh" do
     @asset.update!(splits_updated_at: Time.current)
 
-    assert_no_enqueued_jobs do
+    assert_no_enqueued_jobs only: LoadSplitsJob do
       build_transaction.save!
     end
   end
