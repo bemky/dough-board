@@ -23,9 +23,21 @@ class AssetsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "nasdaq", @asset.exchange
   end
 
-  test "update re-renders edit when the record is invalid" do
+  # The form's selects carry a blank option, so untouched optional fields come
+  # back as "" — which allow_nil does not cover.
+  test "update accepts the blank selects the form submits" do
+    patch asset_path(@asset), params: {asset: {symbol: "SCTY", name: "", type: "crypto", exchange: ""}}
+    assert_redirected_to assets_path
+
+    @asset.reload
+    assert_equal "crypto", @asset.type
+    assert_nil @asset.exchange
+  end
+
+  test "update re-renders edit with the errors when the record is invalid" do
     patch asset_path(@asset), params: {asset: {type: "bond"}}
     assert_response :bad_request
     assert_nil @asset.reload.type
+    assert_select "li", text: "Type is not included in the list"
   end
 end

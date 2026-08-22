@@ -7,6 +7,11 @@ class Asset < ApplicationRecord
   
   normalizes :symbol, with: -> symbol { symbol.upcase }
 
+  # Both validate with allow_nil, but a form's blank select option submits "",
+  # which is neither nil nor a listed value — without this, saving an asset that
+  # has no exchange fails validation on a field the user never touched.
+  normalizes :type, :exchange, with: -> value { value.presence }
+
   validates :type, inclusion: {in: %w(stock fund crypto), allow_nil: true}
   validates :exchange, inclusion: {in: %w(nyse nasdaq), allow_nil: true}
 
