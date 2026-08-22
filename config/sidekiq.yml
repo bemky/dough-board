@@ -1,0 +1,6 @@
+# Loaded automatically by `sidekiq` unless the systemd unit passes its own -C.
+# Every job this app has (LoadSplitsJob) is a slow external scrape, so a small
+# pool is plenty — the work is IO-bound and low-volume.
+:concurrency: 5
+:queues:
+  - default

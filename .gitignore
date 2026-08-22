@@ -40,3 +40,5 @@
 /config/*.key
 /config/*.yml
 /config/*.yml.enc
+# ...but sidekiq.yml is plain worker config, and has to reach the server.
+!/config/sidekiq.yml
