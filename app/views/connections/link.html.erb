@@ -1,0 +1,40 @@
+<div class="p-8 space-y-6" data-plaid-link="<%= @link_token %>">
+    <div>
+        <h1 class="text-2xl font-bold">
+            <% if @connection %>
+                Reconnect <%= @connection.label %>
+            <% else %>
+                Connect an institution
+            <% end %>
+        </h1>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            <% if @connection %>
+                <%= @connector.titleize %> needs you to sign in to this institution again
+                before it can keep reading the account. Nothing else about the
+                connection changes.
+            <% else %>
+                <%= @connector.titleize %> opens the institution's own sign-in. Dough Board
+                never sees the credentials — only the read-only balances and holdings
+                that come back afterward.
+            <% end %>
+        </p>
+    </div>
+
+    <%= form_with url: complete_link_connections_path, method: :post, id: "plaid-link-form" do %>
+        <%= hidden_field_tag :connector, @connector %>
+        <%= hidden_field_tag :connection_id, @connection&.id %>
+        <%# Filled in by the flow on success. An update-mode run leaves it blank:
+            the credentials already on the connection start working again. %>
+        <%= hidden_field_tag :public_token, nil, id: "plaid-public-token" %>
+    <% end %>
+
+    <div class="flex items-center gap-3">
+        <button type="button" data-plaid-open disabled
+            class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+            Open <%= @connector.titleize %>
+        </button>
+        <%= link_to "Cancel", connections_path, class: "text-sm text-gray-500 hover:text-gray-700" %>
+    </div>
+
+    <p class="text-sm text-gray-500" data-plaid-status>Opening&hellip;</p>
+</div>

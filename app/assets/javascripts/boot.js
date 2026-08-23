@@ -168,10 +168,70 @@ function initQuoteRefresh() {
   })
 }
 
+// Plaid Link, on the connections/link page. Link has to run from Plaid's own
+// CDN — it is the sign-in for the institution, and Plaid won't let it be
+// vendored — so the script is loaded on demand rather than bundled, and only on
+// the one page that carries a link token.
+//
+// The token authorizes a single run. On success Link hands back a one-time
+// public_token, which goes to the server to be traded for the connection's
+// permanent credentials; an update-mode run (reconnecting an expired
+// institution) returns none, because the credentials already stored start
+// working again, so the form is submitted either way.
+const PLAID_LINK_SRC = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js'
+
+function initPlaidLink() {
+  const root = document.querySelector('[data-plaid-link]')
+  if (!root) return
+
+  const form = document.getElementById('plaid-link-form')
+  const tokenField = document.getElementById('plaid-public-token')
+  const button = document.querySelector('[data-plaid-open]')
+  const status = document.querySelector('[data-plaid-status]')
+
+  const say = (message) => {
+    if (status) status.textContent = message
+  }
+
+  const script = document.createElement('script')
+  script.src = PLAID_LINK_SRC
+  script.onerror = () => say("Couldn't load Plaid Link. Check the connection and reload.")
+  script.onload = () => {
+    const handler = window.Plaid.create({
+      token: root.dataset.plaidLink,
+      onSuccess: (publicToken) => {
+        if (publicToken) tokenField.value = publicToken
+        say('Finishing up…')
+        form.submit()
+      },
+      onExit: (error) => {
+        say(
+          (error && (error.display_message || error.error_message)) ||
+            'Closed without connecting.'
+        )
+        button.disabled = false
+      },
+    })
+
+    const open = () => {
+      button.disabled = true
+      say('Opening…')
+      handler.open()
+    }
+
+    button.addEventListener('click', open)
+    // Nobody navigates here to look at it, so skip the extra click.
+    open()
+  }
+
+  document.head.appendChild(script)
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initFilterDropdowns()
   initTooltips()
   initDropzone()
   initAutoSubmit()
   initQuoteRefresh()
+  initPlaidLink()
 })
