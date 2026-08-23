@@ -14,10 +14,11 @@
     <% else %>
         <h1 class="text-xl font-bold tracking-tight md:text-2xl">Transactions</h1>
 
-        <%# One column on a phone — the list, then the things you can add — and
-            two on a desk, where a sidebar fits beside it. %>
-        <div class="lg:flex lg:items-start lg:gap-8">
-            <div class="min-w-0 lg:flex-1">
+        <%# One column until xl — the list, then the things you can add. The
+            sidebar only comes alongside on a screen wide enough to keep the
+            table off it; below that it would squeeze the table into a scroll. %>
+        <div class="xl:flex xl:items-start xl:gap-8">
+            <div class="min-w-0 xl:flex-1">
                 <%= render partial: 'transactions/table', locals: {
                     transactions: @transactions,
                     symbols: @symbols,
@@ -26,7 +27,7 @@
                 <%= render partial: 'transactions/pagination', locals: {page: @page, per_page: @per_page, total_pages: @total_pages, total_count: @total_count} %>
             </div>
 
-            <div class="mt-10 space-y-6 lg:mt-0 lg:w-80 lg:shrink-0">
+            <div class="mt-10 space-y-6 xl:mt-0 xl:w-80 xl:shrink-0">
                 <section id="add-transaction" class="card scroll-mt-20">
                     <h2 class="mb-4 text-base font-semibold">Add Transaction</h2>
                     <%= render partial: 'transactions/form', locals: {transaction: Transaction.new} %>

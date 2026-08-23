@@ -196,6 +196,14 @@ input::-webkit-inner-spin-button {
        amount/meta on the right — and the header row is hidden, because a card
        says what each number is by where it sits.
        ----------------------------------------------------------------------- */
+    /* A table has a width its content will not go below, and beside a sidebar
+       that width can outrun the column it sits in — so it scrolls inside its
+       own box rather than spilling over whatever is next to it. Phones don't
+       need it: there the rows are cards, and cards fit. */
+    .table-scroll {
+        overflow-x: auto;
+    }
+
     .data-table {
         width: 100%;
         border-collapse: collapse;

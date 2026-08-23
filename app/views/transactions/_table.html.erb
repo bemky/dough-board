@@ -14,6 +14,7 @@
         symbols: symbols, selected_symbols: selected_symbols, label: "Symbols"
     } %>
 </div>
+<div class="table-scroll">
 <table class="data-table">
     <thead>
         <tr>
@@ -73,6 +74,7 @@
     <% end %>
     </tbody>
 </table>
+</div>
 <% if transactions.empty? %>
     <p class="mt-4 text-sm text-muted"><%= empty_message %></p>
 <% end %>

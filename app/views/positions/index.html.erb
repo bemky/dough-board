@@ -13,7 +13,7 @@
         } %>
 
         <% if @account.manual_positions? %>
-            <section id="add-position" class="card scroll-mt-20 lg:max-w-md">
+            <section id="add-position" class="card scroll-mt-20 xl:max-w-md">
                 <h2 class="mb-4 text-base font-semibold">Add Position</h2>
                 <%= render partial: 'positions/form', locals: {position: Position.new(account: @account)} %>
             </section>
@@ -21,12 +21,12 @@
     <% else %>
         <h1 class="text-xl font-bold tracking-tight md:text-2xl">Positions</h1>
 
-        <div class="lg:flex lg:items-start lg:gap-8">
-            <div class="min-w-0 lg:flex-1">
+        <div class="xl:flex xl:items-start xl:gap-8">
+            <div class="min-w-0 xl:flex-1">
                 <%= render partial: 'positions/table', locals: {positions: @positions} %>
             </div>
 
-            <div class="mt-10 lg:mt-0 lg:w-80 lg:shrink-0">
+            <div class="mt-10 xl:mt-0 xl:w-80 xl:shrink-0">
                 <section id="add-position" class="card scroll-mt-20">
                     <h2 class="mb-4 text-base font-semibold">Add Position</h2>
                     <%= render partial: 'positions/form', locals: {position: Position.new} %>
