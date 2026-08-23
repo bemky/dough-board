@@ -14,7 +14,11 @@ class Account < ApplicationRecord
 
   belongs_to :connection, optional: true
 
-  has_many :transactions
+  # Both delete_all rather than destroy_all: a transaction's callbacks exist to
+  # keep this account's positions in sync, and the account is going away. Running
+  # them per row would enqueue a DerivePositionsJob for every transaction and
+  # then delete the account they were queued for.
+  has_many :transactions, dependent: :delete_all
   has_many :positions, dependent: :delete_all
 
   validates :name, presence: true
