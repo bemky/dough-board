@@ -90,7 +90,7 @@ class Transaction < ApplicationRecord
 
   def derive_account_positions
     return if Thread.current[:skip_position_derivation]
-    return unless account&.manual?
+    return unless account&.derives_positions?
     DerivePositionsJob.perform_later(account)
   end
   

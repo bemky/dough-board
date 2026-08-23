@@ -3,11 +3,20 @@ class Position < ApplicationRecord
   belongs_to :account
   belongs_to :asset
 
+  # Lets a position be entered by ticker rather than by asset id, the same way
+  # a transaction can be.
+  attr_accessor :symbol
+
   validates :units, presence: true
   validates :as_of, presence: true
 
+  before_validation :create_asset
   before_validation :set_as_of
   before_save :set_value
+
+  # An account with no snapshot yet has nowhere to show this position, so the
+  # first one entered by hand establishes one.
+  after_create :adopt_snapshot, unless: -> { account.positions_as_of }
 
   # The newest snapshot for every account, across all of them. Accounts record
   # the timestamp their latest run wrote, so this is an equality join rather
@@ -50,8 +59,23 @@ class Position < ApplicationRecord
     units * price
   end
 
+  # Whether this row can be edited by hand, or belongs to whatever writes the
+  # account's positions.
+  def editable?
+    account.manual_positions?
+  end
+
+  private def create_asset
+    return if asset_id || symbol.blank?
+    self.asset = Asset.find_or_create_by(symbol: symbol)
+  end
+
   private def set_as_of
     self.as_of ||= account&.positions_as_of || Time.current
+  end
+
+  private def adopt_snapshot
+    account.update!(positions_as_of: as_of)
   end
 
   private def set_value

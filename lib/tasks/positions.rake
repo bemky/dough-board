@@ -8,7 +8,7 @@ namespace :positions do
   task derive: :environment do
     as_of = Time.current
     Account.find_each do |account|
-      next unless account.manual?
+      next unless account.derives_positions?
       DerivePositionsJob.perform_later(account, as_of: as_of)
     end
   end

@@ -1,17 +1,36 @@
 class Account < ApplicationRecord
+
+  # Where this account's holdings come from — and so, who is allowed to write
+  # its positions. A connector adds a third value later; it's the same idea with
+  # something else doing the writing.
+  POSITIONS_SOURCES = {
+    "transactions" => "Derived from this account's transactions",
+    "manual" => "Entered and maintained by hand"
+  }.freeze
+
   has_many :transactions
   has_many :positions, dependent: :delete_all
 
   validates :name, presence: true
+  validates :positions_source, inclusion: {in: POSITIONS_SOURCES.keys}
 
   def label
     "#{institution_name} - #{name}"
   end
 
-  # Holdings not fed by a connector are derived from this account's own
-  # transactions by DerivePositionsJob.
-  def manual?
-    true
+  # Whether DerivePositionsJob owns this account's positions. When it does, a
+  # hand-edited position would be rewritten on the job's next run, so the UI
+  # doesn't offer to edit one.
+  def derives_positions?
+    positions_source == "transactions"
+  end
+
+  def manual_positions?
+    positions_source == "manual"
+  end
+
+  def positions_source_description
+    POSITIONS_SOURCES[positions_source]
   end
 
   # The newest snapshot's rows. Empty until something has derived or synced

@@ -4,7 +4,8 @@ module AccountACL
     [
       :name,
       :number,
-      :institution_name
+      :institution_name,
+      :positions_source
     ]
   end
 
