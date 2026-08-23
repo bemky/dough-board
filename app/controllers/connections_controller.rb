@@ -30,7 +30,10 @@ class ConnectionsController < ApplicationController
     @connector = params[:connector].presence
     @connection = Connection.find(params[:connection_id]) if params[:connection_id].present?
     @connector ||= @connection&.connector
-    @link_token = Connectors.for(@connector).link_token(@connection)
+    # Which side of the balance sheet is being connected. Ignored in update
+    # mode, where the Item already knows what it was linked for.
+    @kind = Connectors::Base::LINK_KINDS.key?(params[:kind]) ? params[:kind] : Connectors::Base::LINK_KINDS.keys.first
+    @link_token = Connectors.for(@connector).link_token(@connection, kind: @kind)
   rescue Connectors::ConnectionError, ArgumentError => e
     redirect_to connections_path, alert: e.message
   end

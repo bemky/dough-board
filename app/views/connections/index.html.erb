@@ -13,9 +13,14 @@
                 <%= button_to "Discover #{connector.titleize}", discover_connections_path(connector: connector),
                     class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
             <% end %>
+            <%# One button per kind: a provider shows only the institutions that
+                support everything asked of them, and a brokerage and a card
+                issuer are rarely the same institution. %>
             <% Connectors.linkable.each do |connector| %>
-                <%= link_to "Connect #{connector.titleize}", link_connections_path(connector: connector),
-                    class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+                <% Connectors::Base::LINK_KINDS.each do |kind, label| %>
+                    <%= link_to "Connect #{connector.titleize}: #{label}", link_connections_path(connector: connector, kind: kind),
+                        class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+                <% end %>
             <% end %>
         </div>
     </div>

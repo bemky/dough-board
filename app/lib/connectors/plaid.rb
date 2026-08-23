@@ -90,11 +90,62 @@ module Connectors
       "transfer" => "transfer"
     }.freeze
 
-    # Plaid reports every account behind an Item, including the ones Dough Board
-    # has nothing to say about. A credit card or a loan is a negative balance,
-    # and Position.portfolio drops holdings whose units aren't positive — so
-    # syncing them would create empty accounts that never show a number.
-    SYNCED_ACCOUNT_TYPES = %w[investment brokerage depository].freeze
+    # The account types whose balance is money owed rather than money held.
+    # They carry no holdings — the balance itself is the whole position — so
+    # #positions and #transactions take a different path for them.
+    DEBT_ACCOUNT_TYPES = %w[credit loan].freeze
+
+    # Plaid reports every account behind an Item, and Dough Board wants all of
+    # them: assets and debts together are what a net worth is.
+    SYNCED_ACCOUNT_TYPES = (%w[investment brokerage depository] + DEBT_ACCOUNT_TYPES).freeze
+
+    # account.subtype -> the asset a debt is carried against. Debts are folded
+    # by kind rather than by account, so two cards at two banks add up to one
+    # "credit card" line in the portfolio and stay separate on their own account
+    # pages. Anything Plaid reports that isn't here falls back to its type.
+    #
+    # The DEBT: prefix is what keeps these off the ticker tape — "LOAN" and
+    # "AUTO" are both real symbols, and an asset named either would be quoted
+    # against a company that has nothing to do with the debt.
+    DEBTS_BY_SUBTYPE = {
+      "credit card" => "DEBT:CREDIT_CARD",
+      "paypal" => "DEBT:CREDIT_CARD",
+      "line of credit" => "DEBT:LINE_OF_CREDIT",
+      "overdraft" => "DEBT:LINE_OF_CREDIT",
+      "auto" => "DEBT:AUTO_LOAN",
+      "mortgage" => "DEBT:HOME_LOAN",
+      "home equity" => "DEBT:HOME_LOAN",
+      "construction" => "DEBT:HOME_LOAN",
+      "student" => "DEBT:STUDENT_LOAN"
+    }.freeze
+
+    DEBTS_BY_TYPE = {"credit" => "DEBT:CREDIT_CARD", "loan" => "DEBT:LOAN"}.freeze
+
+    # What each debt asset is called the first time it's created.
+    DEBT_NAMES = {
+      "DEBT:CREDIT_CARD" => "Credit Card Debt",
+      "DEBT:LINE_OF_CREDIT" => "Line of Credit",
+      "DEBT:AUTO_LOAN" => "Auto Loan",
+      "DEBT:HOME_LOAN" => "Home Loan",
+      "DEBT:STUDENT_LOAN" => "Student Loan",
+      "DEBT:LOAN" => "Loan"
+    }.freeze
+
+    # Reading an Item's credit and loan accounts needs the liabilities product;
+    # investments alone gets the brokerage side and, at institutions that filter
+    # account selection by product, nothing else.
+    #
+    # They can't both simply be asked for: Link only shows institutions that
+    # support *every* product in the request, and hardly any support both — the
+    # sandbox's own investments institution refuses `liabilities` outright. So
+    # one is required and the other is asked for only where it's supported,
+    # which is what LINK_KINDS chooses between.
+    PRODUCTS_BY_KIND = {
+      "holdings" => ::Plaid::Products::INVESTMENTS,
+      "debts" => ::Plaid::Products::LIABILITIES
+    }.freeze
+
+    PRODUCTS = PRODUCTS_BY_KIND.values.freeze
 
     def accounts(connection)
       response = accounts_get(connection)
@@ -116,14 +167,20 @@ module Connectors
     # #positions instead, as a holding in a security of type "cash", so this
     # returns nil for one rather than counting it twice.
     def cash(connection, account)
-      plaid_account = Array(accounts_get(connection).accounts)
-        .find { |candidate| candidate.account_id == account.foreign_id }
+      plaid_account = plaid_account(connection, account)
       return unless plaid_account&.type == "depository"
-      return unless plaid_account.balances&.iso_currency_code.in?([nil, CURRENCY])
+      return unless dollars?(plaid_account)
       plaid_account.balances&.current
     end
 
+    # A credit card or a loan holds nothing; its balance *is* its position, so
+    # it's carried as a negative number of dollars against the asset standing in
+    # for that kind of debt. Everything downstream — the snapshot, the account
+    # total, the portfolio — then adds it up without knowing it's a liability.
     def positions(connection, account)
+      plaid_account = plaid_account(connection, account)
+      return debt_positions(plaid_account) if DEBT_ACCOUNT_TYPES.include?(plaid_account&.type)
+
       response = holdings_get(connection, account)
       return [] unless response
 
@@ -141,6 +198,10 @@ module Connectors
     # because ConnectionJob asks per account and an Item's full activity — every
     # account, two years — is thousands of rows to fetch once per account.
     def transactions(connection, account, since: nil)
+      # A card's or a loan's activity is spending and payments, which is the
+      # `transactions` product, not this one — asking here would only fail.
+      return [] if DEBT_ACCOUNT_TYPES.include?(plaid_account(connection, account)&.type)
+
       collected = []
       offset = 0
 
@@ -191,7 +252,7 @@ module Connectors
     # access token — the flow for re-authenticating a connection the institution
     # has expired (ITEM_LOGIN_REQUIRED), which issues no new token because the
     # one on hand starts working again.
-    def link_token(connection = nil)
+    def link_token(connection = nil, kind: LINK_KINDS.keys.first)
       request = {
         client_name: CLIENT_NAME,
         language: "en",
@@ -200,13 +261,19 @@ module Connectors
       }
 
       if connection
+        # Update mode signs back in to the Item on hand; naming products here
+        # would change what it was linked for, which isn't what a reconnect is.
         request[:access_token] = access_token(connection)
       else
+        product = PRODUCTS_BY_KIND.fetch(kind.to_s) do
+          raise ConnectionError, "Plaid can't link #{kind.inspect}"
+        end
         # `balance` is not accepted here — Plaid initializes it alongside any
-        # other product — so `investments` is what's asked for, and /accounts/get
-        # still returns the institution's bank accounts along with the
-        # brokerage ones.
-        request[:products] = [::Plaid::Products::INVESTMENTS]
+        # other product. The one product decides which institutions Link will
+        # show; the rest are taken wherever the chosen institution happens to
+        # support them, so a bank that does both is connected once.
+        request[:products] = [product]
+        request[:required_if_supported_products] = PRODUCTS - [product]
       end
 
       call { client.link_token_create(::Plaid::LinkTokenCreateRequest.new(**request)) }.link_token
@@ -253,13 +320,24 @@ module Connectors
     # exchange, accounts, holdings, activity, prune — testable against the real
     # API before a production Item is spent on it. See `bin/rails plaid:sandbox`.
     # Refused outside the sandbox, where the endpoint doesn't exist anyway.
+    #
+    # There's no Link here to negotiate products, so the institution is asked
+    # what it supports first: naming one it doesn't is an outright refusal, and
+    # the sandbox's investments institution and its liabilities one are not the
+    # same institution.
     def sandbox_public_token(institution_id)
       raise ConnectionError, "Only the sandbox can mint a public token" unless environment == "sandbox"
+
+      products = PRODUCTS & institution_products(institution_id)
+      if products.empty?
+        raise ConnectionError, "#{institution_id} supports neither holdings nor debts"
+      end
+
       call do
         client.sandbox_public_token_create(
           ::Plaid::SandboxPublicTokenCreateRequest.new(
             institution_id: institution_id,
-            initial_products: [::Plaid::Products::INVESTMENTS]
+            initial_products: products
           )
         )
       end.public_token
@@ -302,6 +380,18 @@ module Connectors
     # that there are none.
     NO_HOLDINGS_ERRORS = %w[PRODUCTS_NOT_SUPPORTED NO_INVESTMENT_ACCOUNTS].freeze
 
+    # How long one /accounts/get answer stands in for the next. It answers for
+    # the whole Item at once, but ConnectionJob asks per account — for its kind,
+    # its cash and whether to read its activity — so an Item with a dozen
+    # accounts would otherwise make dozens of identical calls in a burst, and
+    # Plaid rate-limits per Item. Long enough to cover one sync, short enough
+    # that the next one asks again.
+    ACCOUNTS_TTL = 1.minute
+
+    def initialize
+      @accounts = {}
+    end
+
     def credentials
       Rails.application.credentials.plaid
     end
@@ -325,8 +415,61 @@ module Connectors
       end
     end
 
+    def institution_products(institution_id)
+      response = call do
+        client.institutions_get_by_id(
+          ::Plaid::InstitutionsGetByIdRequest.new(
+            institution_id: institution_id, country_codes: [::Plaid::CountryCode::US]
+          )
+        )
+      end
+      Array(response.institution&.products).map(&:to_s)
+    end
+
     def accounts_get(connection)
-      call { client.accounts_get(::Plaid::AccountsGetRequest.new(access_token: access_token(connection))) }
+      token = access_token(connection)
+      fetched_at, response = @accounts[token]
+      return response if fetched_at && fetched_at > ACCOUNTS_TTL.ago
+
+      response = call { client.accounts_get(::Plaid::AccountsGetRequest.new(access_token: token)) }
+      @accounts[token] = [Time.current, response]
+      response
+    end
+
+    # The Plaid side of one of our accounts. Everything an account carries that
+    # isn't a holding — its type, its balance — comes from here.
+    def plaid_account(connection, account)
+      Array(accounts_get(connection).accounts)
+        .find { |candidate| candidate.account_id == account.foreign_id }
+    end
+
+    # Dough Board values everything in dollars, so a balance in anything else
+    # isn't a number it can add up.
+    def dollars?(plaid_account)
+      plaid_account.balances&.iso_currency_code.in?([nil, CURRENCY])
+    end
+
+    # Plaid signs a debt from the lender's side: on a credit or loan account a
+    # positive `current` is what's owed, and a negative one is the lender owing
+    # the account holder (an overpaid card). Negating it puts the balance on the
+    # same axis as everything else Dough Board adds up, overpayments included.
+    def debt_positions(plaid_account)
+      balance = plaid_account.balances&.current
+      return [] if balance.nil? || !dollars?(plaid_account)
+
+      symbol = debt_symbol(plaid_account)
+      [{
+        symbol: symbol,
+        name: DEBT_NAMES[symbol],
+        type: "liability",
+        units: -balance,
+        price: 1.0,
+        currency: CURRENCY
+      }]
+    end
+
+    def debt_symbol(plaid_account)
+      DEBTS_BY_SUBTYPE[plaid_account.subtype.to_s] || DEBTS_BY_TYPE.fetch(plaid_account.type, "DEBT:LOAN")
     end
 
     def holdings_get(connection, account)

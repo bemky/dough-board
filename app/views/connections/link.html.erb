@@ -4,7 +4,7 @@
             <% if @connection %>
                 Reconnect <%= @connection.label %>
             <% else %>
-                Connect an institution
+                Connect a <%= Connectors::Base::LINK_KINDS[@kind] %>
             <% end %>
         </h1>
         <p class="mt-1 max-w-2xl text-sm text-gray-500">
@@ -14,8 +14,10 @@
                 connection changes.
             <% else %>
                 <%= @connector.titleize %> opens the institution's own sign-in. Dough Board
-                never sees the credentials — only the read-only balances and holdings
-                that come back afterward.
+                never sees the credentials — only the read-only balances, holdings and
+                amounts owed that come back afterward. Only institutions that can answer
+                for a <%= Connectors::Base::LINK_KINDS[@kind] %> are offered; connect the
+                other kind from the connections page separately.
             <% end %>
         </p>
     </div>

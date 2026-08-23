@@ -21,8 +21,14 @@
         </div>
         <div>
             <%= f.label :type, class: label_classes %>
-            <%= f.select :type, %w(stock fund crypto), {include_blank: true}, class: field_classes %>
-            <p class="mt-1 text-xs text-gray-500">Crypto is quoted as BINANCE:&lt;SYMBOL&gt;USDT.</p>
+            <%# "cash" is left out: the dollar asset is made and maintained by
+                the sync. "liability" is offered, so a loan at a lender no
+                connection reaches can still be kept by hand. %>
+            <%= f.select :type, %w(stock fund crypto liability), {include_blank: true}, class: field_classes %>
+            <p class="mt-1 text-xs text-gray-500">
+                Crypto is quoted as BINANCE:&lt;SYMBOL&gt;USDT. A liability is worth a dollar a
+                unit and is held in negative units — what's owed.
+            </p>
         </div>
         <div>
             <%= f.label :exchange, class: label_classes %>

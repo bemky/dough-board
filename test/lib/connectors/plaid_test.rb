@@ -10,25 +10,33 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
   # Stands in for Plaid::PlaidApi. Each method returns whatever was handed to it,
   # or raises, and records the request so the test can assert on what was asked.
   class FakeApi
-    attr_reader :requests
+    attr_reader :requests, :errors
     attr_accessor :accounts_response, :holdings_response, :transactions_responses,
-      :link_token_response, :exchange_response, :error
+      :link_token_response, :exchange_response, :institution_response,
+      :sandbox_token_response, :error
 
     def initialize
       @requests = Hash.new { |hash, key| hash[key] = [] }
       @transactions_responses = []
+      # `error` fails everything; `errors[:some_call]` fails just that one, which
+      # is how an endpoint refusing while the rest of the Item works is written.
+      @errors = {}
     end
 
     %i[accounts_get investments_holdings_get link_token_create
-      item_public_token_exchange item_remove].each do |method|
+      item_public_token_exchange item_remove institutions_get_by_id
+      sandbox_public_token_create].each do |method|
       define_method(method) do |request|
         @requests[method] << request
-        raise @error if @error
+        failure = @errors[method] || @error
+        raise failure if failure
         case method
         when :accounts_get then @accounts_response
         when :investments_holdings_get then @holdings_response
         when :link_token_create then @link_token_response
         when :item_public_token_exchange then @exchange_response
+        when :institutions_get_by_id then @institution_response
+        when :sandbox_public_token_create then @sandbox_token_response
         else true
         end
       end
@@ -36,7 +44,8 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
 
     def investments_transactions_get(request)
       @requests[:investments_transactions_get] << request
-      raise @error if @error
+      failure = @errors[:investments_transactions_get] || @error
+      raise failure if failure
       @transactions_responses.shift
     end
   end
@@ -45,11 +54,18 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
     @api = FakeApi.new
     @connector = Connectors::Plaid.send(:instance)
     @connector.instance_variable_set(:@client, @api)
+    # The connector is a singleton and holds one /accounts/get answer per Item
+    # for a minute; the next test's answer is a different one.
+    @connector.instance_variable_get(:@accounts).clear
 
     @connection = Connection.create!(connector: "plaid", foreign_id: "item-1",
       financial_institution: "Vanguard", credentials: {"access_token" => "access-1"})
     @account = Account.create!(name: "Plaid 401k", connection: @connection,
       foreign_id: "acct-invest", positions_source: "connection")
+    # Positions and transactions both ask what kind of account they're being
+    # called for, so /accounts/get answers by default and tests that care about
+    # a particular account override it.
+    @api.accounts_response = accounts_response(account(id: "acct-invest", type: "investment"))
   end
 
   teardown do
@@ -116,17 +132,20 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
 
   # --- accounts -------------------------------------------------------------
 
-  test "accounts keeps the ones a portfolio can hold and drops the debts" do
+  test "accounts keeps what is owed alongside what is held" do
     @api.accounts_response = accounts_response(
       account(id: "acct-invest", type: "investment", subtype: "401k", name: "Plaid 401k", mask: "6666"),
       account(id: "acct-bank", type: "depository", subtype: "checking", name: "Plaid Checking"),
       account(id: "acct-card", type: "credit", subtype: "credit card"),
-      account(id: "acct-loan", type: "loan", subtype: "mortgage")
+      account(id: "acct-loan", type: "loan", subtype: "mortgage"),
+      account(id: "acct-other", type: "other", subtype: "other")
     )
 
     accounts = Connectors::Plaid.accounts(@connection)
 
-    assert_equal %w[acct-invest acct-bank], accounts.map { |a| a[:foreign_id] }
+    # A net worth is assets and debts together; only what Plaid can't classify
+    # at all is left out.
+    assert_equal %w[acct-invest acct-bank acct-card acct-loan], accounts.map { |a| a[:foreign_id] }
     assert_equal({foreign_id: "acct-invest", name: "Plaid 401k", number: "6666",
       institution_name: "Vanguard"}, accounts.first)
   end
@@ -235,9 +254,99 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
   end
 
   test "an institution with no brokerage behind it has no holdings, not an error" do
-    @api.error = api_error("PRODUCTS_NOT_SUPPORTED", "products not supported")
+    @api.errors[:investments_holdings_get] = api_error("PRODUCTS_NOT_SUPPORTED", "products not supported")
 
     assert_empty Connectors::Plaid.positions(@connection, @account)
+  end
+
+  # --- debts ----------------------------------------------------------------
+
+  test "a debt is its balance, carried as dollars owed rather than held" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-card", type: "credit", subtype: "credit card", current: 1123.45)
+    )
+    card = Account.create!(name: "Card", connection: @connection,
+      foreign_id: "acct-card", positions_source: "connection")
+
+    position = Connectors::Plaid.positions(@connection, card).sole
+
+    assert_equal "DEBT:CREDIT_CARD", position[:symbol]
+    assert_equal "liability", position[:type]
+    # Plaid says what's owed as a positive number; Dough Board adds everything
+    # up on one axis, so it's negative here.
+    assert_equal(-1123.45, position[:units])
+    assert_equal 1.0, position[:price]
+    # A debt holds nothing, so there is nothing to ask /investments/holdings for.
+    assert_empty @api.requests[:investments_holdings_get]
+  end
+
+  test "each kind of debt gets its own asset, and an unfamiliar one still counts" do
+    subtypes = {
+      "credit card" => "DEBT:CREDIT_CARD", "auto" => "DEBT:AUTO_LOAN",
+      "mortgage" => "DEBT:HOME_LOAN", "home equity" => "DEBT:HOME_LOAN",
+      "student" => "DEBT:STUDENT_LOAN", "line of credit" => "DEBT:LINE_OF_CREDIT",
+      "commercial" => "DEBT:LOAN", nil => "DEBT:LOAN"
+    }
+
+    subtypes.each do |subtype, symbol|
+      type = subtype == "credit card" ? "credit" : "loan"
+      # Each pass is a different Item as far as this test is concerned, so the
+      # answer held for the last one doesn't stand in for this one.
+      @connector.instance_variable_get(:@accounts).clear
+      @api.accounts_response = accounts_response(
+        account(id: "acct-debt", type: type, subtype: subtype, current: 500.0)
+      )
+      debt = Account.new(name: "Debt", connection: @connection, foreign_id: "acct-debt")
+
+      assert_equal symbol, Connectors::Plaid.positions(@connection, debt).sole[:symbol],
+        "#{type}/#{subtype.inspect}"
+    end
+  end
+
+  test "an overpaid card is money owed to the account holder, and keeps its sign" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-card", type: "credit", subtype: "credit card", current: -75.0)
+    )
+    card = Account.new(name: "Card", connection: @connection, foreign_id: "acct-card")
+
+    assert_equal 75.0, Connectors::Plaid.positions(@connection, card).sole[:units]
+  end
+
+  test "a debt in another currency is left out rather than counted as dollars" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-card", type: "credit", subtype: "credit card", current: 400.0, currency: "GBP")
+    )
+    card = Account.new(name: "Card", connection: @connection, foreign_id: "acct-card")
+
+    assert_empty Connectors::Plaid.positions(@connection, card)
+  end
+
+  test "one answer about an Item's accounts serves the whole sync" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment"),
+      account(id: "acct-bank", type: "depository", current: 500.0)
+    )
+    @api.holdings_response = holdings_response(holdings: [], securities: [])
+    @api.transactions_responses = [transactions_response([])]
+
+    Connectors::Plaid.positions(@connection, @account)
+    Connectors::Plaid.cash(@connection, @account)
+    Connectors::Plaid.transactions(@connection, @account)
+
+    # /accounts/get answers for every account at once, and Plaid rate-limits per
+    # Item — an Item with a dozen accounts would otherwise ask dozens of times.
+    assert_equal 1, @api.requests[:accounts_get].length
+  end
+
+  test "a debt's activity belongs to a product this connector doesn't ask for" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-card", type: "credit", subtype: "credit card")
+    )
+    card = Account.new(name: "Card", connection: @connection, foreign_id: "acct-card")
+
+    assert_empty Connectors::Plaid.transactions(@connection, card)
+    # Asking /investments/transactions about a credit card only earns an error.
+    assert_empty @api.requests[:investments_transactions_get]
   end
 
   # --- transactions ---------------------------------------------------------
@@ -311,20 +420,40 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
     assert_raises(Connectors::ConnectionError) { Connectors::Plaid.authorizations }
   end
 
-  test "a link token asks for investments; one for a connection updates it in place" do
+  test "a link token asks for one product and takes the other where it's supported" do
     @api.link_token_response = ::Plaid::LinkTokenCreateResponse.new(
       link_token: "link-sandbox-1", expiration: Time.current, request_id: "req"
     )
 
     assert_equal "link-sandbox-1", Connectors::Plaid.link_token
+    assert_equal "link-sandbox-1", Connectors::Plaid.link_token(nil, kind: "debts")
+
+    holdings, debts = @api.requests[:link_token_create]
+    # Link only shows institutions that support every product asked for, and
+    # hardly any support both — so the second one rides along optionally.
+    assert_equal ["investments"], holdings.products
+    assert_equal ["liabilities"], holdings.required_if_supported_products
+    assert_equal ["liabilities"], debts.products
+    assert_equal ["investments"], debts.required_if_supported_products
+  end
+
+  test "a link token for a connection updates that Item in place, asking for nothing new" do
+    @api.link_token_response = ::Plaid::LinkTokenCreateResponse.new(
+      link_token: "link-sandbox-1", expiration: Time.current, request_id: "req"
+    )
+
     assert_equal "link-sandbox-1", Connectors::Plaid.link_token(@connection)
 
-    fresh, update = @api.requests[:link_token_create]
-    assert_equal ["investments"], fresh.products
-    assert_nil fresh.access_token
-    # Update mode reauthenticates the Item already on hand rather than making one.
-    assert_equal "access-1", update.access_token
-    assert_nil update.products
+    request = @api.requests[:link_token_create].sole
+    assert_equal "access-1", request.access_token
+    # A reconnect signs back in to what's already linked; naming products here
+    # would be asking for something else.
+    assert_nil request.products
+    assert_nil request.required_if_supported_products
+  end
+
+  test "a link is refused for something neither product answers for" do
+    assert_raises(Connectors::ConnectionError) { Connectors::Plaid.link_token(nil, kind: "houses") }
   end
 
   test "connecting trades the one-time token for the connection's own credentials" do
@@ -369,6 +498,34 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
 
     assert_equal "ITEM_LOGIN_REQUIRED", error.code
     assert_match "the login details of this item have changed", error.message
+  end
+
+  test "the sandbox asks a test institution only for what it supports" do
+    @api.institution_response = ::Plaid::InstitutionsGetByIdResponse.new(
+      request_id: "req",
+      institution: ::Plaid::Institution.new(institution_id: "ins_1", name: "First Platypus",
+        products: %w[transactions liabilities], country_codes: ["US"], routing_numbers: [], oauth: false)
+    )
+    @api.sandbox_token_response = ::Plaid::SandboxPublicTokenCreateResponse.new(
+      public_token: "public-sandbox-1", request_id: "req"
+    )
+
+    assert_equal "public-sandbox-1", Connectors::Plaid.sandbox_public_token("ins_1")
+
+    # Naming a product the institution doesn't have is an outright refusal, and
+    # there is no Link here to negotiate it away.
+    assert_equal ["liabilities"], @api.requests[:sandbox_public_token_create].sole.initial_products
+  end
+
+  test "the sandbox says so when a test institution answers for neither side" do
+    @api.institution_response = ::Plaid::InstitutionsGetByIdResponse.new(
+      request_id: "req",
+      institution: ::Plaid::Institution.new(institution_id: "ins_1", name: "First Platypus",
+        products: %w[auth], country_codes: ["US"], routing_numbers: [], oauth: false)
+    )
+
+    assert_raises(Connectors::ConnectionError) { Connectors::Plaid.sandbox_public_token("ins_1") }
+    assert_empty @api.requests[:sandbox_public_token_create]
   end
 
   test "the sandbox shortcut refuses to run against production" do

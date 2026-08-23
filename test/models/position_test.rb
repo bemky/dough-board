@@ -99,4 +99,25 @@ class PositionTest < ActiveSupport::TestCase
     assert_in_delta 250.0, holding[:value], 0.001
   end
 
+  test "a debt is a negative holding, and the portfolio it's in is a net worth" do
+    quote(@asset, 12.0)
+    build_position(units: 10)
+    debt = Asset.create!(symbol: "DEBT:CREDIT_CARD", type: "liability", splits_updated_at: Time.current)
+    build_position(account: @other, asset: debt, units: -1000.0)
+
+    holdings = Position.where(as_of: @as_of).portfolio
+
+    card = holdings.find { |holding| holding[:symbol] == "DEBT:CREDIT_CARD" }
+    assert_in_delta 1.0, card[:price], 0.001
+    assert_in_delta(-1000.0, card[:value], 0.001)
+    assert_in_delta(-880.0, holdings.sum { |holding| holding[:value] }, 0.001)
+  end
+
+  test "a debt paid off is no longer a holding" do
+    debt = Asset.create!(symbol: "DEBT:AUTO_LOAN", type: "liability", splits_updated_at: Time.current)
+    build_position(asset: debt, units: 0)
+
+    assert_empty Position.where(as_of: @as_of).portfolio
+  end
+
 end

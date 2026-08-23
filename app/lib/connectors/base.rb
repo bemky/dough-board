@@ -67,11 +67,20 @@ module Connectors
       false
     end
 
+    # Which side of the balance sheet a link is being made for. Providers show
+    # only the institutions that can answer for everything asked of them, and
+    # almost none answer for both — so connecting a brokerage and connecting a
+    # credit card are two runs of the flow, not one.
+    LINK_KINDS = {
+      "holdings" => "bank or brokerage",
+      "debts" => "card or loan"
+    }.freeze
+
     # A linkable connector's two halves: a token that authorizes one run of the
     # provider's browser flow, and the exchange of what that flow returns for
     # the attributes of a Connection — `credentials` among them, which is the
     # whole reason the column exists.
-    def link_token(connection = nil)
+    def link_token(connection = nil, kind: LINK_KINDS.keys.first)
       raise NotImplementedError
     end
 
