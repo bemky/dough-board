@@ -5,6 +5,7 @@ class ConnectionTest < ActiveSupport::TestCase
 
   test "connector must be one Connectors knows" do
     assert Connection.new(connector: "snaptrade").valid?
+    assert Connection.new(connector: "plaid").valid?
     connection = Connection.new(connector: "nope")
     assert_not connection.valid?
     assert_includes connection.errors[:connector], "is not included in the list"
@@ -38,6 +39,46 @@ class ConnectionTest < ActiveSupport::TestCase
 
     connection.destroy!
     assert_nil account.reload.connection_id
+  end
+
+  test "only a provider's own error code means someone has to sign in again" do
+    connection = Connection.new(connector: "plaid")
+
+    connection.last_error = "ITEM_LOGIN_REQUIRED: the login details of this item have changed"
+    assert connection.needs_reauthorization?
+
+    connection.last_error = "INSTITUTION_DOWN: down for maintenance"
+    assert_not connection.needs_reauthorization?
+
+    connection.last_error = nil
+    assert_not connection.needs_reauthorization?
+  end
+
+  test "deleting a connection releases it at the provider too" do
+    connection = Connection.create!(connector: "plaid", foreign_id: "item-1",
+      credentials: {"access_token" => "access-1"})
+    released = []
+
+    Connectors::Plaid.singleton_class.define_method(:disconnect!) { |c| released << c; true }
+    connection.destroy!
+
+    assert_equal [connection], released
+  ensure
+    Connectors::Plaid.singleton_class.remove_method(:disconnect!)
+  end
+
+  test "a provider that can't release a connection doesn't hold the row hostage" do
+    connection = Connection.create!(connector: "plaid", foreign_id: "item-1")
+
+    Connectors::Plaid.singleton_class.define_method(:disconnect!) do |_c|
+      raise Connectors::ConnectionError, "ITEM_NOT_FOUND"
+    end
+
+    assert_difference "Connection.count", -1 do
+      connection.destroy!
+    end
+  ensure
+    Connectors::Plaid.singleton_class.remove_method(:disconnect!)
   end
 
 end

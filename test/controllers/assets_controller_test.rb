@@ -8,6 +8,23 @@ class AssetsControllerTest < ActionDispatch::IntegrationTest
     @nasdaq = Exchange.create!(code: "NASDAQ", name: "Nasdaq Stock Market")
   end
 
+  test "the portfolio nets what's owed against what's held" do
+    account = Account.create!(institution_name: "Testbank", name: "Card", positions_source: "connection")
+    debt = Asset.create!(symbol: "DEBT:CREDIT_CARD", name: "Credit Card Debt",
+      type: "liability", splits_updated_at: Time.current)
+    as_of = Time.current
+    Position.create!(account: account, asset: @asset, as_of: as_of, units: 10, price: 100.0)
+    Position.create!(account: account, asset: debt, as_of: as_of, units: -250.0, price: 1.0)
+    account.update!(positions_as_of: as_of)
+
+    get assets_path
+    assert_response :success
+
+    assert_select "[data-portfolio-total]", text: /\$750\.00/
+    assert_select "[data-portfolio-assets]", text: /\$1,000\.00/
+    assert_select "body", text: /Credit Card Debt/
+  end
+
   test "edit renders the form for the asset" do
     get edit_asset_path(@asset)
     assert_response :success

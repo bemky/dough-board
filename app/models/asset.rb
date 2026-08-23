@@ -15,7 +15,7 @@ class Asset < ApplicationRecord
   # whose type was never touched fails validation on it.
   normalizes :type, with: -> value { value.presence }
 
-  validates :type, inclusion: {in: %w(stock fund crypto cash), allow_nil: true}
+  validates :type, inclusion: {in: %w(stock fund crypto cash liability), allow_nil: true}
   validates :symbol, uniqueness: true
 
   # Both symbol and type feed #quote_symbol — type decides whether the request
@@ -36,8 +36,21 @@ class Asset < ApplicationRecord
     type == "cash"
   end
 
+  # A debt — a card balance, a mortgage — is carried the same way cash is: a
+  # position of dollars worth face value, negative because they're owed rather
+  # than held. The asset is the *kind* of debt, so every card across every
+  # institution folds into one holding in the portfolio.
+  def liability?
+    type == "liability"
+  end
+
+  # Dollars, held or owed, are worth a dollar. Nothing here is quotable.
+  def face_value?
+    cash? || liability?
+  end
+
   def price
-    return 1.0 if cash?
+    return 1.0 if face_value?
     current_quote&.price
   end
 
@@ -60,7 +73,7 @@ class Asset < ApplicationRecord
   end
 
   def cached_price
-    return 1.0 if cash?
+    return 1.0 if face_value?
     cached_quote&.price
   end
   

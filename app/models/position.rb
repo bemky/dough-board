@@ -27,6 +27,9 @@ class Position < ApplicationRecord
   # `Position.current.portfolio` gives the whole portfolio and
   # `account.current_positions.portfolio` gives one account's.
   # Returns [{symbol:, asset:, units:, price:, value:}, ...], unsorted.
+  #
+  # A holding can be negative: a debt is units of dollars owed rather than held
+  # (see Asset#liability?), and the sum of the whole set is a net worth.
   def self.portfolio
     holdings = {}
     includes(:asset).each do |position|
@@ -51,7 +54,8 @@ class Position < ApplicationRecord
       holding[:price] = holding[:asset].cached_price || holding[:quoted_price]&.last
       holding[:value] = holding[:units] * (holding[:price] || 0)
       holding.delete(:quoted_price)
-    end.filter { |holding| holding[:units] > 0 }
+      # A holding sold down to nothing, or a debt paid off, is not a holding.
+    end.filter { |holding| !holding[:units].to_f.zero? }
   end
 
   def current_value

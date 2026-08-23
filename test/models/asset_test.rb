@@ -61,4 +61,14 @@ class AssetTest < ActiveSupport::TestCase
     @asset.update!(symbol: "scty")
     assert_equal [@quote.id], @asset.quotes.reload.map(&:id)
   end
+
+  test "a debt is dollars owed: worth face value, and never quoted" do
+    debt = Asset.create!(symbol: "DEBT:HOME_LOAN", type: "liability", splits_updated_at: Time.current)
+
+    assert debt.liability?
+    assert_equal 1.0, debt.price
+    assert_equal 1.0, debt.cached_price
+    # #price would otherwise create a Quote, which fetches from Finnhub.
+    assert_empty debt.quotes.reload
+  end
 end

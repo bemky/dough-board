@@ -6,8 +6,9 @@ class Quote < ApplicationRecord
 
   def fetch(force=false)
     return if price && !force
-    # Cash is worth its face value — Finnhub has nothing to say about it.
-    throw :abort if asset.cash?
+    # Dollars held or owed are worth their face value — Finnhub has nothing to
+    # say about either.
+    throw :abort if asset.face_value?
     price = Finnhub.quote(asset.quote_symbol)
     # Abort the callback chain (so a blank Quote is never persisted) when
     # Finnhub returns nothing — e.g. an unknown symbol or a rate-limited request.

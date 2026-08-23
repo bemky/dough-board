@@ -33,6 +33,12 @@
                 <% end %>
             </td>
             <td class="py-2 text-right">
+                <%# Signing in again is the only thing that fixes an expired
+                    connection, so it leads when that's what's wrong. %>
+                <% if connection.linkable? && connection.needs_reauthorization? %>
+                    <%= link_to "Reconnect", link_connections_path(connection_id: connection.id),
+                        class: "mr-1 inline-flex items-center rounded-md border border-red-300 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100" %>
+                <% end %>
                 <%= button_to "Sync", sync_connection_path(connection),
                     form: {class: "inline"},
                     class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>

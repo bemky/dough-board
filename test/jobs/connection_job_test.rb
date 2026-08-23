@@ -107,6 +107,25 @@ class ConnectionJobTest < ActiveSupport::TestCase
 
     assert_equal "acct-1", @connection.accounts.sole.name
   end
+  
+  test "a debt account is an account worth less than nothing" do
+    StubConnector.accounts_data = [
+      {foreign_id: "acct-card", name: "Sapphire", number: "X-9", institution_name: "Testbank"}
+    ]
+    StubConnector.positions_data = [
+      {symbol: "DEBT:CREDIT_CARD", name: "Credit Card Debt", type: "liability",
+       units: -1123.45, price: 1.0, currency: "USD"}
+    ]
+
+    ConnectionJob.perform_now(@connection)
+
+    account = @connection.accounts.sole
+    position = account.current_positions.sole
+    assert_equal "liability", position.asset.type
+    assert_in_delta(-1123.45, position.units, 0.001)
+    assert_in_delta(-1123.45, position.value, 0.001)
+    assert_in_delta(-1123.45, account.value, 0.001)
+  end
 
   test "fills in the asset from the instrument, matching the exchange by MIC" do
     exchange = Exchange.create!(code: "NASDAQ", mic_code: "XNAS", name: "Nasdaq Stock Market")
