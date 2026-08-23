@@ -77,6 +77,37 @@ Create per-app units (mirror an existing app's units, renaming):
 - [ ] `systemctl enable dough-board-worker@0.service` for each worker
       instance you want running.
 
+### The worker unit must not pass `-q` or `-C`
+
+This app's queues are declared in `config/sidekiq.yml`, which `sidekiq` loads on
+its own. Keeping them there means the queue list travels with the release
+instead of living in a server-side file nobody looks at.
+
+- [ ] Confirm `ExecStart` runs plain `bundle exec sidekiq` with **no** `-q` and
+      **no** `-C`.
+
+Worth spelling out because mirroring another app's unit is how this goes wrong:
+if that app ran several queues its unit likely carries `-q '*'`, and `*` is
+taken as a **literal queue name**, not a wildcard. The failure is silent and
+looks nothing like a queue problem — the worker registers, heartbeats, reports
+`busy: 0`, never errors, and jobs pile up untouched:
+
+```ruby
+Sidekiq::Stats.new.enqueued          # climbing
+Sidekiq::Stats.new.processed         # 0
+Sidekiq::Stats.new.failed            # 0
+Sidekiq::ProcessSet.new.size         # 1 — a worker really is alive
+```
+
+The one command that settles it, on the server:
+
+```bash
+valkey-cli monitor | grep -i brpop | head -5
+```
+
+`"brpop" "queue:default"` is healthy. `"brpop" "queue:*"` means the worker is
+polling a queue that will never exist.
+
 ## 8. sudoers (deploy user needs to restart its own services)
 
 Capistrano's deploy task runs `sudo systemctl restart ...` as the deploy
@@ -128,3 +159,33 @@ dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl status dough-board-worker@*.s
 - [ ] Confirm `current` symlink is created and points at the new release.
 - [ ] Confirm app responds over HTTPS with a valid cert.
 - [ ] Confirm worker unit(s) are `active (running)`, not crash-looping.
+- [ ] Confirm the workers are actually *consuming*, not merely running — an
+      idle worker on the wrong queue looks identical to a healthy one from
+      `systemctl status`. From `cap production console`:
+
+      ```ruby
+      require "sidekiq/api"
+      Sidekiq::Stats.new.processed     # must climb once anything is enqueued
+      Sidekiq::ProcessSet.new.map { |p| p["queues"] }   # expect ["default"]
+      ```
+
+## 12. Reading logs
+
+Rails and Sidekiq both log to stdout under systemd, so output lands in the
+journal — **not** in `log/production.log`.
+
+```bash
+sudo journalctl -u dough-board-app.service -n 200 -f        # web
+sudo journalctl -u 'dough-board-worker@*' -n 200 -f         # every worker
+sudo journalctl -u 'dough-board-*' -n 200 -f                # both, interleaved
+sudo journalctl -u 'dough-board-worker@*' -p err --no-pager # failures only
+```
+
+- [ ] Add the deploy user to the `systemd-journal` group so reading logs doesn't
+      need `sudo` at all: `usermod -aG systemd-journal dough-board` (takes
+      effect on next login). The sudoers rules above cover `systemctl` only —
+      they deliberately don't grant `journalctl`, and group membership is the
+      narrower way to allow reads.
+
+`cap production log` tails the **app** unit specifically; for jobs, use the
+worker commands above.
