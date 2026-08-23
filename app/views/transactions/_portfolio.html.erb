@@ -1,27 +1,19 @@
 <% total = portfolio.sum { |holding| holding[:value] } %>
-<div>
-    <div class="font-bold uppercase text-gray-500">
-        <%= local_assigns.fetch(:title, "Value") %>
-    </div>
-    <div class="text-2xl font-bold mb-2" data-portfolio-total>
-        <%= number_to_currency total %>
-    </div>
-    <% tiles = Treemap.layout(portfolio) { |holding| holding[:value] } %>
-    <% if tiles.empty? %>
-        <p class="text-gray-500">No holdings</p>
-    <% else %>
-        <% colors = %w(bg-blue-500 bg-purple-500 bg-green-600 bg-yellow-600 bg-red-500 bg-gray-500) %>
-        <div class="relative h-96 w-full rounded overflow-hidden">
-            <% tiles.each_with_index do |tile, index| %>
-                <div data-tooltip="<%= tile.item[:symbol] %>: <%= number_to_currency tile.item[:value] %>" tabindex="0"
-                     class="absolute overflow-hidden p-1 text-white leading-tight border border-white/40 <%= colors[index % colors.length] %>"
-                     style="left:<%= tile.x %>%; top:<%= tile.y %>%; width:<%= tile.width %>%; height:<%= tile.height %>%">
-                    <div class="text-xs font-bold truncate"><%= tile.item[:symbol] %></div>
-                    <% if tile.width > 8 && tile.height > 10 %>
-                        <div class="text-[10px] truncate"><%= number_to_currency tile.item[:value] %></div>
-                    <% end %>
-                </div>
-            <% end %>
+<% tiles = Treemap.layout(portfolio) { |holding| holding[:value] } %>
+<section class="space-y-5">
+    <div class="text-center">
+        <div class="text-xs font-semibold uppercase tracking-widest text-muted">
+            <%= local_assigns.fetch(:title, "Value") %>
         </div>
+        <div class="mt-2"><%= display_amount total, data: {portfolio_total: true} %></div>
+    </div>
+
+    <% if tiles.empty? %>
+        <p class="text-center text-sm text-muted">No holdings</p>
+    <% else %>
+        <%= render partial: 'shared/treemap', locals: {cells: tiles.map { |tile|
+            {x: tile.x, y: tile.y, width: tile.width, height: tile.height,
+             label: tile.item[:symbol], amount: tile.item[:value], path: nil}
+        }} %>
     <% end %>
-</div>
+</section>

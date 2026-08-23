@@ -1,0 +1,29 @@
+<%# Tiles for a treemap, laid out by Treemap.layout and handed here as plain
+    cells: {x, y, width, height, label, amount, path}. Both the portfolio and
+    the accounts page draw the same thing, so they draw it from here.
+
+    Taller than it is wide on a phone, wider on a desk: a tile has to hold a
+    ticker and a number either way. %>
+<%# The cap keeps a wide screen from handing the whole fold to one picture; the
+    tiles are placed in percentages, so a shorter box just redraws them. %>
+<div class="relative aspect-[4/5] max-h-[65vh] w-full overflow-hidden rounded-2xl sm:aspect-[3/2] md:aspect-[16/9] md:max-h-[420px]">
+    <% colors = %w(bg-tile-1 bg-tile-2 bg-tile-3 bg-tile-4 bg-tile-5 bg-tile-6) %>
+    <% cells.each_with_index do |cell, index| %>
+        <% tag_options = {
+            data: {tooltip: "#{cell[:label]}: #{number_to_currency cell[:amount]}"},
+            class: "absolute flex flex-col justify-start overflow-hidden border border-canvas/30 p-2 leading-tight text-white/95 #{colors[index % colors.length]}",
+            style: "left:#{cell[:x]}%; top:#{cell[:y]}%; width:#{cell[:width]}%; height:#{cell[:height]}%"
+        } %>
+        <% content = capture do %>
+            <span class="truncate text-xs font-bold tracking-tight"><%= cell[:label] %></span>
+            <% if cell[:width] > 12 && cell[:height] > 12 %>
+                <span class="truncate text-[11px] text-white/70"><%= number_to_currency cell[:amount] %></span>
+            <% end %>
+        <% end %>
+        <% if cell[:path] %>
+            <%= link_to content, cell[:path], **tag_options %>
+        <% else %>
+            <%= content_tag :div, content, **tag_options.merge(tabindex: 0) %>
+        <% end %>
+    <% end %>
+</div>

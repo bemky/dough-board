@@ -1,9 +1,9 @@
-<div class="p-8 space-y-8">
+<div class="space-y-8">
     <% if @account %>
         <%= render partial: 'accounts/header', locals: {account: @account, tab: :positions} %>
 
-        <div class="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
-            <span class="font-semibold">Holdings:</span> <%= @account.positions_source_description %><% if @account.derives_positions? %>, and rewritten on every run — edit the transactions, not these rows<% end %>.
+        <div class="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-muted">
+            <span class="font-semibold text-ink">Holdings:</span> <%= @account.positions_source_description %><% if @account.derives_positions? %>, and rewritten on every run — edit the transactions, not these rows<% end %>.
         </div>
 
         <%= render partial: 'positions/table', locals: {
@@ -13,22 +13,29 @@
         } %>
 
         <% if @account.manual_positions? %>
-            <div class="max-w-md rounded-xl bg-gray-100 p-8">
-                <h3 class="mb-4 text-lg font-semibold">Add Position</h3>
+            <section id="add-position" class="card scroll-mt-20 lg:max-w-md">
+                <h2 class="mb-4 text-base font-semibold">Add Position</h2>
                 <%= render partial: 'positions/form', locals: {position: Position.new(account: @account)} %>
-            </div>
+            </section>
         <% end %>
     <% else %>
-        <div class="flex gap-8">
-            <div class="flex-1">
+        <h1 class="text-xl font-bold tracking-tight md:text-2xl">Positions</h1>
+
+        <div class="lg:flex lg:items-start lg:gap-8">
+            <div class="min-w-0 lg:flex-1">
                 <%= render partial: 'positions/table', locals: {positions: @positions} %>
             </div>
-            <div class="w-80 shrink-0 space-y-8">
-                <div class="rounded-xl bg-gray-100 p-8">
-                    <h3 class="mb-4 text-lg font-semibold">Add Position</h3>
+
+            <div class="mt-10 lg:mt-0 lg:w-80 lg:shrink-0">
+                <section id="add-position" class="card scroll-mt-20">
+                    <h2 class="mb-4 text-base font-semibold">Add Position</h2>
                     <%= render partial: 'positions/form', locals: {position: Position.new} %>
-                </div>
+                </section>
             </div>
+        </div>
+
+        <div class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-20 px-4 md:hidden">
+            <%= link_to "Add Position", "#add-position", class: "btn btn-primary w-full shadow-lg" %>
         </div>
     <% end %>
 </div>

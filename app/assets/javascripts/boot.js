@@ -18,7 +18,7 @@ function initFilterDropdowns() {
         autoPlacement: false,
         content: template.content.cloneNode(true),
         class:
-          'z-40 overflow-hidden rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg',
+          'z-40 overflow-hidden rounded-2xl border border-line bg-surface text-ink shadow-xl',
       })
       dropdown.show()
     })
@@ -37,7 +37,7 @@ function initTooltips() {
     tip = document.createElement('div')
     tip.textContent = content
     tip.className =
-      'pointer-events-none fixed z-50 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg'
+      'pointer-events-none fixed z-50 rounded-lg bg-ink px-2 py-1 text-xs text-white shadow-lg'
     document.body.appendChild(tip)
 
     const rect = el.getBoundingClientRect()
@@ -83,14 +83,14 @@ function initDropzone() {
   ;['dragenter', 'dragover'].forEach((evt) =>
     zone.addEventListener(evt, (e) => {
       e.preventDefault()
-      zone.classList.add('border-blue-400', 'bg-blue-50')
+      zone.classList.add('border-ink', 'text-ink')
     })
   )
 
   ;['dragleave', 'drop'].forEach((evt) =>
     zone.addEventListener(evt, (e) => {
       e.preventDefault()
-      zone.classList.remove('border-blue-400', 'bg-blue-50')
+      zone.classList.remove('border-ink', 'text-ink')
     })
   )
 
@@ -109,6 +109,16 @@ function initDropzone() {
 function initAutoSubmit() {
   document.querySelectorAll('[data-auto-submit]').forEach((el) => {
     el.addEventListener('change', () => el.form && el.form.requestSubmit())
+  })
+}
+
+// A `[data-navigate]` select carries a URL per option — the phone's stand-in
+// for the sort headers, which only exist on a screen wide enough for a table.
+function initNavigateSelects() {
+  document.querySelectorAll('[data-navigate]').forEach((el) => {
+    el.addEventListener('change', () => {
+      if (el.value) window.location.href = el.value
+    })
   })
 }
 
@@ -145,6 +155,18 @@ function initQuoteRefresh() {
     if (valueCell) valueCell.textContent = formatCurrency(value)
   }
 
+  // A headline figure sets its cents in gray (see ApplicationHelper#display_amount),
+  // so rewriting one means rebuilding both halves rather than assigning text.
+  const renderAmount = (el, value) => {
+    const formatted = formatCurrency(value)
+    const split = formatted.length - 3
+    el.textContent = formatted.slice(0, split)
+    const fraction = document.createElement('span')
+    fraction.className = 'amount-fraction'
+    fraction.textContent = formatted.slice(split)
+    el.appendChild(fraction)
+  }
+
   const updatePortfolioTotal = () => {
     const totalEl = document.querySelector('[data-portfolio-total]')
     if (!totalEl) return
@@ -153,7 +175,8 @@ function initQuoteRefresh() {
       const amount = parseFloat(el.textContent.replace(/[^0-9.-]/g, ''))
       if (Number.isFinite(amount)) total += amount
     })
-    totalEl.textContent = formatCurrency(total)
+    if (totalEl.dataset.amount) renderAmount(totalEl, total)
+    else totalEl.textContent = formatCurrency(total)
   }
 
   cellsBySymbol.forEach((cells, symbol) => {
@@ -173,5 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initTooltips()
   initDropzone()
   initAutoSubmit()
+  initNavigateSelects()
   initQuoteRefresh()
 })

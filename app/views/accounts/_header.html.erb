@@ -1,16 +1,29 @@
-<div class="space-y-6">
-    <div class="flex items-start justify-between">
-        <div>
-            <div class="font-bold uppercase text-gray-500"><%= account.institution_name %></div>
-            <h1 class="text-2xl font-bold"><%= account.name %></h1>
+<div class="space-y-5">
+    <div class="flex items-start gap-3">
+        <%# A phone has no room for a nav crumb, so the way back is a button. %>
+        <%= link_to accounts_path, class: "btn-icon md:hidden", "aria-label": "Back to accounts" do %>
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 12H5m0 0 6-6m-6 6 6 6" />
+            </svg>
+        <% end %>
+
+        <div class="min-w-0 flex-1 text-center md:text-left">
+            <div class="text-xs font-semibold uppercase tracking-widest text-muted"><%= account.institution_name %></div>
+            <h1 class="truncate text-xl font-bold tracking-tight md:text-2xl"><%= account.name %></h1>
             <% if account.number.present? %>
-                <div class="text-sm text-gray-500">#<%= account.number %></div>
+                <div class="text-sm text-muted">#<%= account.number %></div>
             <% end %>
         </div>
-        <%= link_to "Edit", edit_account_path(account), class: "text-blue-600 hover:underline" %>
+
+        <%= link_to edit_account_path(account), class: "btn-icon", "aria-label": "Edit account" do %>
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+            </svg>
+        <% end %>
     </div>
 
-    <div class="flex gap-6 border-b border-gray-200">
+    <div class="tabs">
         <%= nav_tab "Assets", account_path(account), tab == :assets %>
         <%= nav_tab "Positions", account_positions_path(account), tab == :positions %>
         <%= nav_tab "Transactions", account_transactions_path(account), tab == :transactions %>

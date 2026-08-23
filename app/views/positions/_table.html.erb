@@ -1,47 +1,56 @@
 <% show_account = local_assigns.fetch(:show_account, true) %>
 <% empty_message = local_assigns.fetch(:empty_message, "No Positions") %>
-<table class="w-full border-collapse">
+<%# Sorting, for a screen too narrow to show a header row. %>
+<div class="mb-2 md:hidden">
+    <%= sort_select [
+        ["Largest value", :value, "desc"],
+        ["Smallest value", :value, "asc"],
+        ["Symbol A–Z", "asset.symbol", "asc"],
+        ["Most units", :units, "desc"]
+    ] %>
+</div>
+<table class="data-table">
     <thead>
-        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
-            <th class="py-2 pr-4"><%= sort_header "Symbol", "asset.symbol" %></th>
+        <tr>
+            <th><%= sort_header "Symbol", "asset.symbol" %></th>
             <% if show_account %>
-                <th class="py-2 pr-4"><%= sort_header "Account", "account.name" %></th>
+                <th><%= sort_header "Account", "account.name" %></th>
             <% end %>
-            <th class="py-2 pr-4"><%= sort_header "Units", :units, align: :right %></th>
-            <th class="py-2 pr-4"><%= sort_header "Price", :price, align: :right %></th>
-            <th class="py-2 pr-4"><%= sort_header "Value", :value, align: :right %></th>
-            <th class="py-2 pr-4"><%= sort_header "Cost Basis", :cost_basis, align: :right %></th>
-            <th class="py-2"></th>
+            <th><%= sort_header "Units", :units, align: :right %></th>
+            <th><%= sort_header "Price", :price, align: :right %></th>
+            <th><%= sort_header "Value", :value, align: :right %></th>
+            <th><%= sort_header "Cost Basis", :cost_basis, align: :right %></th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
     <% positions.each do |position| %>
-        <tr class="border-b border-gray-100">
-            <td class="py-2 pr-4 font-semibold"><%= position.asset.symbol %></td>
+        <tr>
+            <td class="cell-primary"><%= position.asset.symbol %></td>
             <% if show_account %>
-                <td class="py-2 pr-4"><%= link_to position.account.label, position.account, class: "text-blue-600 hover:underline" %></td>
+                <td class="cell-caption"><%= link_to position.account.label, position.account, class: "hover:underline" %></td>
             <% end %>
-            <td class="py-2 pr-4 text-right"><%= position.units.round(4) %></td>
-            <td class="py-2 pr-4 text-right"
+            <td class="cell-secondary" data-label="Units"><%= position.units.round(4) %></td>
+            <td class="cell-meta"
                 data-quote-symbol="<%= position.asset.symbol %>"
                 data-quantity="<%= position.units %>">
                 <% if position.price %>
                     <span data-quote-price><%= number_to_currency position.price %></span>
                 <% else %>
-                    <span class="text-xs text-gray-400" data-quote-price>Loading&hellip;</span>
+                    <span class="text-xs text-muted" data-quote-price>Loading&hellip;</span>
                 <% end %>
             </td>
-            <td class="py-2 pr-4 text-right" data-quote-value>
-                <%= position.value ? number_to_currency(position.value) : content_tag(:span, "&mdash;".html_safe, class: "text-gray-400") %>
+            <td class="cell-amount" data-quote-value>
+                <%= position.value ? number_to_currency(position.value) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
             </td>
-            <td class="py-2 pr-4 text-right text-gray-500">
-                <%= position.cost_basis ? number_to_currency(position.cost_basis) : content_tag(:span, "&mdash;".html_safe, class: "text-gray-400") %>
+            <td class="cell-detail-amount" data-label="Cost">
+                <%= position.cost_basis ? number_to_currency(position.cost_basis) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
             </td>
-            <td class="py-2 text-right">
+            <td class="cell-action">
                 <%# A derived account's snapshot is rewritten on every run, so an edit
                     to one of its rows would not survive; don't offer one. %>
                 <% if position.editable? %>
-                    <%= link_to "Edit", edit_position_path(position), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>
+                    <%= link_to "Edit", edit_position_path(position), class: "btn btn-secondary btn-sm" %>
                 <% end %>
             </td>
         </tr>
@@ -49,5 +58,5 @@
     </tbody>
 </table>
 <% if positions.empty? %>
-    <p class="text-gray-500 mt-4"><%= empty_message %></p>
+    <p class="mt-4 text-sm text-muted"><%= empty_message %></p>
 <% end %>

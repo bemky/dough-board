@@ -1,5 +1,5 @@
-<% field_classes = "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" %>
-<% label_classes = "block text-sm font-medium text-gray-700 mb-1" %>
+<% field_classes = "field" %>
+<% label_classes = "label" %>
 <%= form_for account do |f| %>
     <%= hidden_field_tag "redirect_to", "/" %>
     <div class="space-y-4">
@@ -19,19 +19,19 @@
             <%= f.label :positions_source, "Holdings", class: label_classes %>
             <% if account.synced_positions? %>
                 <%# Not a choice: the connector that created this account maintains it. %>
-                <p class="text-sm text-gray-700"><%= account.positions_source_description %></p>
-                <p class="mt-1 text-xs text-gray-500">
+                <p class="text-sm text-ink"><%= account.positions_source_description %></p>
+                <p class="hint">
                     Managed by the <%= account.connection&.label %> connection.
                 </p>
             <% else %>
                 <%= f.select :positions_source, Account::SELECTABLE_POSITIONS_SOURCES.map { |value, label| [label, value] }, {}, class: field_classes %>
-                <p class="mt-1 text-xs text-gray-500">
+                <p class="hint">
                     Derived holdings are recomputed from this account's transactions on every run;
                     hand-maintained ones are never rewritten.
                 </p>
             <% end %>
         </div>
-        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+        <button type="submit" class="btn btn-primary w-full md:w-auto">
             <%= account.persisted? ? "Update Account" : "Create Account" %>
         </button>
     </div>

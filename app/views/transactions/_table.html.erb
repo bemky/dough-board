@@ -2,12 +2,24 @@
 <% empty_message = local_assigns.fetch(:empty_message, "No Transactions") %>
 <% symbols = local_assigns.fetch(:symbols, []) %>
 <% selected_symbols = local_assigns.fetch(:selected_symbols, []) %>
-<table class="w-full border-collapse">
+<%# Sorting and filtering, for a screen too narrow to show a header row. %>
+<div class="mb-2 flex items-center justify-between gap-3 md:hidden">
+    <%= sort_select [
+        ["Newest first", :executed_at, "desc"],
+        ["Oldest first", :executed_at, "asc"],
+        ["Largest value", :value, "desc"],
+        ["Symbol A–Z", "asset.symbol", "asc"]
+    ] %>
+    <%= render partial: 'transactions/symbol_filter', locals: {
+        symbols: symbols, selected_symbols: selected_symbols, label: "Symbols"
+    } %>
+</div>
+<table class="data-table">
     <thead>
-        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
-            <th class="py-2 pr-4"><%= sort_header "Type", :type %></th>
-            <th class="py-2 pr-4"><%= sort_header "Execution", :executed_at %></th>
-            <th class="py-2 pr-4">
+        <tr>
+            <th><%= sort_header "Type", :type %></th>
+            <th><%= sort_header "Execution", :executed_at %></th>
+            <th>
                 <div class="flex items-center gap-1">
                     <%= sort_header "Symbol", "asset.symbol" %>
                     <%= render partial: 'transactions/symbol_filter', locals: {
@@ -15,50 +27,52 @@
                     } %>
                 </div>
             </th>
-            <th class="py-2 pr-4"><%= sort_header "Quantity", :quantity, align: :right, sub: "Split Adjusted" %></th>
-            <th class="py-2 pr-4"><%= sort_header "Value", :value, align: :right, sub: "At Execution" %></th>
+            <th><%= sort_header "Quantity", :quantity, align: :right, sub: "Split Adjusted" %></th>
+            <th><%= sort_header "Value", :value, align: :right, sub: "At Execution" %></th>
             <% if show_account %>
-                <th class="py-2 pr-4"><%= sort_header "Account", "account.name" %></th>
+                <th><%= sort_header "Account", "account.name" %></th>
             <% end %>
-            <th class="py-2 font-semibold"></th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
     <% transactions.each do |transaction| %>
-        <tr class="border-b border-gray-100">
-            <td class="py-2 pr-4">
+        <tr>
+            <td class="cell-secondary">
                 <%# Green adds units, red removes them, gray moves cash rather than shares. %>
-                <% type_color = {1 => "text-green-600", -1 => "text-red-600"}.fetch(Transaction::UNIT_SIGNS[transaction.type], "text-gray-500") %>
-                <span class="uppercase text-xs font-bold <%= type_color %>"><%= transaction.type.tr("_", " ") %></span>
+                <% type_color = {1 => "text-gain", -1 => "text-loss"}.fetch(Transaction::UNIT_SIGNS[transaction.type], "text-muted") %>
+                <span class="text-xs font-bold uppercase tracking-wide <%= type_color %>"><%= transaction.type.tr("_", " ") %></span>
             </td>
-            <td class="py-2 pr-4"><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
-            <td class="py-2 pr-4"><%= transaction.asset.symbol %></td>
-            <td class="py-2 pr-4 text-right">
+            <td class="cell-detail"><%= transaction.executed_at.strftime("%b %d, %Y") %></td>
+            <td class="cell-primary"><%= transaction.asset.symbol %></td>
+            <td class="cell-meta" data-label="Qty">
                 <%= transaction.quantity %>
-                <span class="text-xs text-gray-500"><%= transaction.adjusted_quantity %></span>
+                <%# The split-adjusted count is the header's second line, and a
+                    phone has no header — so it stays on the desk. %>
+                <span class="hidden text-xs text-muted md:inline"><%= transaction.adjusted_quantity %></span>
             </td>
-            <td class="py-2 pr-4 text-right"
+            <td class="cell-amount"
                 data-quote-symbol="<%= transaction.asset.symbol %>"
                 data-quantity="<%= transaction.adjusted_quantity || transaction.quantity %>">
                 <span data-quote-amount>
                     <% if transaction.cached_value %>
                         <%= number_to_currency transaction.cached_value %>
                     <% else %>
-                        <span class="text-xs text-gray-400">Loading&hellip;</span>
+                        <span class="text-xs text-muted">Loading&hellip;</span>
                     <% end %>
                 </span>
-                <span class="block text-xs text-gray-500"><%= number_to_currency transaction.value %></span>
+                <span class="block text-xs font-normal text-muted"><%= number_to_currency transaction.value %></span>
             </td>
             <% if show_account %>
-                <td class="py-2 pr-4"><%= link_to transaction.account.label, transaction.account, class: "text-blue-600 hover:underline" %></td>
+                <td class="cell-caption"><%= link_to transaction.account.label, transaction.account, class: "hover:underline" %></td>
             <% end %>
-            <td class="py-2 text-right">
-                <%= link_to "Edit", edit_transaction_path(transaction), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>
+            <td class="cell-action">
+                <%= link_to "Edit", edit_transaction_path(transaction), class: "btn btn-secondary btn-sm" %>
             </td>
         </tr>
     <% end %>
     </tbody>
 </table>
 <% if transactions.empty? %>
-    <p class="text-gray-500 mt-4"><%= empty_message %></p>
+    <p class="mt-4 text-sm text-muted"><%= empty_message %></p>
 <% end %>

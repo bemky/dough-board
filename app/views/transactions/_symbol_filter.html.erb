@@ -1,19 +1,23 @@
 <%# Filter button for the Symbol column. boot.js pulls the template's markup
-    into a Komps.Dropdown anchored to the button. %>
+    into a Komps.Dropdown anchored to the button. Rendered twice: once in the
+    column header for a desk, once in the phone toolbar, since a phone's rows
+    are cards with no header to click. %>
+<% label = local_assigns.fetch(:label, nil) %>
 <% if symbols.any? %>
     <div class="relative">
         <button type="button" data-filter-button aria-label="Filter symbols"
-                class="flex items-center gap-1 rounded p-1 <%= selected_symbols.any? ? "text-blue-600" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700" %>">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                class="flex items-center gap-1.5 rounded-full px-2 py-2 <%= label ? "btn btn-secondary btn-sm" : "" %> <%= selected_symbols.any? ? "text-ink" : "text-muted hover:text-ink" %>">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
+            <% if label %><span><%= label %></span><% end %>
             <% if selected_symbols.any? %>
-                <span class="text-xs font-normal"><%= selected_symbols.size %></span>
+                <span class="text-xs font-semibold"><%= selected_symbols.size %></span>
             <% end %>
         </button>
 
         <template data-filter-content>
-            <%= form_with url: request.path, method: :get, class: "flex max-h-80 w-56 flex-col" do %>
+            <%= form_with url: request.path, method: :get, class: "flex max-h-[70vh] w-64 flex-col" do %>
                 <% params.fetch(:order, {}).each do |key, direction| %>
                     <%= hidden_field_tag "order[#{key}]", direction, id: nil %>
                 <% end %>
@@ -21,16 +25,16 @@
 
                 <div class="flex-1 overflow-y-auto p-2">
                     <% symbols.each do |symbol| %>
-                        <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm font-normal hover:bg-gray-100">
-                            <%= check_box_tag "symbols[]", symbol, selected_symbols.include?(symbol), id: nil, class: "rounded border-gray-300" %>
+                        <label class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-normal hover:bg-canvas">
+                            <%= check_box_tag "symbols[]", symbol, selected_symbols.include?(symbol), id: nil, class: "h-4 w-4 rounded border-line" %>
                             <%= symbol %>
                         </label>
                     <% end %>
                 </div>
 
-                <div class="flex items-center justify-between gap-2 border-t border-gray-200 p-2">
-                    <%= link_to "Clear", list_url(symbols: nil, page: 1), class: "px-2 text-sm font-normal text-gray-500 hover:underline" %>
-                    <button type="submit" class="rounded-md bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700">Apply</button>
+                <div class="flex items-center justify-between gap-2 border-t border-line p-2">
+                    <%= link_to "Clear", list_url(symbols: nil, page: 1), class: "px-2 text-sm font-normal text-muted hover:underline" %>
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
                 </div>
             <% end %>
         </template>
