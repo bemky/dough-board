@@ -11,12 +11,27 @@ class LoadSplitsJob < ApplicationJob
   def perform(asset, force: false)
     asset.load_splits(force)
 
-    # Sharing this asset instance keeps load_splits from re-scraping per row,
-    # and force is required because set_adjusted_quantity is a no-op once
-    # adjusted_quantity is set.
-    asset.transactions.each do |transaction|
-      transaction.asset = asset
-      transaction.set_adjusted_quantity!(true)
+    account_ids = Set.new
+
+    # Every one of these saves would otherwise enqueue its own derivation, and
+    # they all correct the same snapshot — an asset held across a few hundred
+    # transactions produced a few hundred identical jobs. Fold once per account
+    # afterwards instead, the same way the CSV import does.
+    Transaction.without_position_derivation do
+      # Sharing this asset instance keeps load_splits from re-scraping per row,
+      # and force is required because set_adjusted_quantity is a no-op once
+      # adjusted_quantity is set.
+      asset.transactions.each do |transaction|
+        transaction.asset = asset
+        transaction.set_adjusted_quantity!(true)
+        account_ids << transaction.account_id
+      end
+    end
+
+    # Only the accounts whose positions are folded from transactions: a synced
+    # or hand-maintained account's holdings don't move because a split landed.
+    Account.where(id: account_ids).find_each do |account|
+      DerivePositionsJob.perform_later(account) if account.derives_positions?
     end
   end
 end
