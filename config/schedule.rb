@@ -17,3 +17,9 @@ end
 every 1.hour, at: 5 do
   rake "positions:derive"
 end
+
+# The same point in the history, for accounts an institution feeds rather than
+# transactions. Offset again so the two aren't competing for the worker.
+every 1.hour, at: 10 do
+  rake "connections:sync"
+end
