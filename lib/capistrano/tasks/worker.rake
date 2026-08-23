@@ -28,8 +28,14 @@ namespace :worker do
       fetch(:worker_instances).each do |instance|
         unit = "#{fetch(:application)}-worker@#{instance}.service"
         # A unit that hit systemd's start-rate limit stays failed and ignores
-        # restart until it's reset, so clear that first.
-        execute "sudo systemctl reset-failed #{unit} || true"
+        # restart until it's reset, so clear that first. This must not abort a
+        # deploy — but it must not vanish either: without a NOPASSWD sudoers
+        # rule for reset-failed specifically, sudo asks for a password no one
+        # can type and the safety net quietly stops existing. Say so instead.
+        execute "sudo -n systemctl reset-failed #{unit} || " \
+                "echo 'WARNING: reset-failed on #{unit} was refused — add a NOPASSWD " \
+                "sudoers rule for it (see BUILD.md), or a rate-limited worker will " \
+                "stay dead through a deploy that reports success.' >&2"
         execute "sudo systemctl restart #{unit}"
       end
     end
