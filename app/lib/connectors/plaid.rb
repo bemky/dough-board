@@ -526,10 +526,12 @@ module Connectors
     # not a new instrument per institution.
     def symbol_for(security)
       return CURRENCY if security.type == "cash"
-      security.ticker_symbol.presence ||
-        security.cusip.presence ||
-        security.isin.presence ||
-        (security.security_id.presence && "PLAID:#{security.security_id}")
+      canonical_symbol(
+        security.ticker_symbol.presence ||
+          security.cusip.presence ||
+          security.isin.presence ||
+          (security.security_id.presence && "PLAID:#{security.security_id}")
+      )
     end
 
     def transaction_attributes(activity, securities)

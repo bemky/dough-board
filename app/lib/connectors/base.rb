@@ -53,6 +53,49 @@ module Connectors
       []
     end
 
+    # Venue spellings of instruments Dough Board already knows by another name.
+    # Kraken carries its older listings under ISO-4217-style codes — crypto
+    # prefixed X, fiat prefixed Z, and Bitcoin as XBT — so the coin Coinbase
+    # reports as BTC arrives as XXBT and becomes a second asset: its own tile,
+    # its own cost basis, and no price at all, because Asset#quote_symbol goes
+    # on to ask Finnhub for BINANCE:XXBTUSDT.
+    #
+    # Keyed by the provider's symbol rather than by venue. None of these codes
+    # is a real ticker anywhere else, so there is nothing to collide with, and a
+    # flat map applies to activity rows too — those don't reliably say which
+    # venue they came from. Only the prefixed listings are here: Kraken leaves
+    # newer coins alone (XTZ is XTZ), so stripping an X by rule would mangle
+    # them.
+    SYMBOL_ALIASES = {
+      "XBT" => "BTC",
+      "XXBT" => "BTC",
+      "XDG" => "DOGE",
+      "XXDG" => "DOGE",
+      "XETC" => "ETC",
+      "XETH" => "ETH",
+      "XLTC" => "LTC",
+      "XMLN" => "MLN",
+      "XREP" => "REP",
+      "XXLM" => "XLM",
+      "XXMR" => "XMR",
+      "XXRP" => "XRP",
+      "XZEC" => "ZEC",
+      "ZAUD" => "AUD",
+      "ZCAD" => "CAD",
+      "ZEUR" => "EUR",
+      "ZGBP" => "GBP",
+      "ZJPY" => "JPY",
+      "ZUSD" => "USD"
+    }.freeze
+
+    # What Dough Board calls the instrument a provider named `symbol`. Applied
+    # at the boundary like everything else here, so nothing downstream — assets,
+    # positions, quotes, the treemap — ever sees a venue's private spelling.
+    def canonical_symbol(symbol)
+      return symbol if symbol.blank?
+      SYMBOL_ALIASES.fetch(symbol.to_s.upcase, symbol)
+    end
+
     # How a connection to this service gets made. The two are exclusive in
     # practice: a service either lets us read what its credentials are already
     # connected to (SnapTrade, where the connecting happens on its own site), or
