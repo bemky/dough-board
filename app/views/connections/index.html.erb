@@ -2,14 +2,19 @@
     <div class="flex items-start justify-between">
         <div>
             <h1 class="text-2xl font-bold">Connections</h1>
-            <p class="mt-1 text-sm text-gray-500">
-                Read-only links to an institution. Connections are made on the provider's
-                site; Discover picks up whatever is already there.
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                Read-only links to an institution. Some providers are connected to on
+                their own site and picked up here by Discover; others hand over one
+                connection at a time through Connect.
             </p>
         </div>
         <div class="flex gap-2">
-            <% Connectors.names.each do |connector| %>
+            <% Connectors.discoverable.each do |connector| %>
                 <%= button_to "Discover #{connector.titleize}", discover_connections_path(connector: connector),
+                    class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+            <% end %>
+            <% Connectors.linkable.each do |connector| %>
+                <%= link_to "Connect #{connector.titleize}", link_connections_path(connector: connector),
                     class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
             <% end %>
         </div>

@@ -37,6 +37,12 @@ Rails.application.routes.draw do
   get "quotes/:symbol", to: "assets#quote", as: :asset_quote, constraints: {symbol: /[^\/]+/}
 
   post "connections/discover", to: "connections#discover", as: :discover_connections
+  # Plaid has no list of a client_id's connections to discover: each one is made
+  # by running Plaid Link in the browser, which is what these two serve — the
+  # page that opens Link, and where its one-time token comes back to. Declared
+  # ahead of standard_resources so "link" isn't read as a connection id.
+  get "connections/link", to: "connections#link", as: :link_connections
+  post "connections/link", to: "connections#complete_link", as: :complete_link_connections
   standard_resources :connections do
     post :sync, on: :member
   end
