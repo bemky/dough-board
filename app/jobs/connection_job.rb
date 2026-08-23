@@ -49,7 +49,6 @@ class ConnectionJob < ApplicationJob
     rows = connector.positions(connection, account)
 
     cash = connector.cash(connection, account)
-    account.update_column(:cash, cash)
 
     asset_ids = rows.map do |row|
       position = Position.find_or_initialize_by(
@@ -72,7 +71,9 @@ class ConnectionJob < ApplicationJob
   end
 
   # Uninvested cash rides along as a position against a cash asset, so it shows
-  # up in the treemap and the account total without anything special-casing it.
+  # up in the treemap and the account total without anything special-casing it —
+  # and, unlike a column on the account, it belongs to one snapshot, so a
+  # historical valuation reports the cash of its own moment.
   def cash_position(account, cash, as_of)
     asset = Asset.find_or_create_by!(symbol: "USD") { |a| a.type = "cash"; a.name = "US Dollar" }
     position = Position.find_or_initialize_by(account_id: account.id, asset_id: asset.id, as_of: as_of)

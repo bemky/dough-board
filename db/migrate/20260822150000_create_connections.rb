@@ -23,7 +23,6 @@ class CreateConnections < ActiveRecord::Migration[8.1]
 
     add_reference :accounts, :connection, foreign_key: true
     add_column :accounts, :foreign_id, :string
-    add_column :accounts, :cash, :float
     add_index :accounts, [:connection_id, :foreign_id], unique: true, where: "foreign_id IS NOT NULL"
   end
 end

@@ -12,7 +12,6 @@
 
 ActiveRecord::Schema[8.1].define(version: 2026_08_22_150000) do
   create_table "accounts", force: :cascade do |t|
-    t.float "cash"
     t.integer "connection_id"
     t.datetime "created_at", null: false
     t.string "foreign_id"

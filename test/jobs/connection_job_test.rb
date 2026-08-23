@@ -136,12 +136,29 @@ class ConnectionJobTest < ActiveSupport::TestCase
     ConnectionJob.perform_now(@connection)
     account = @connection.accounts.sole
 
-    assert_in_delta 250.0, account.reload.cash, 0.001
     cash = account.current_positions.find { |p| p.asset.symbol == "USD" }
     assert_equal "cash", cash.asset.type
+    assert_in_delta 250.0, cash.units, 0.001
     assert_in_delta 250.0, cash.value, 0.001
     # 10 x $200 of AAPL, plus the cash.
     assert_in_delta 2250.0, account.value, 0.001
+  end
+
+  # The point of carrying cash as a position rather than a column on the
+  # account: it belongs to one snapshot, so an older valuation reports the cash
+  # of its own moment rather than today's.
+  test "each snapshot keeps its own cash" do
+    StubConnector.cash_data = 250.0
+    ConnectionJob.perform_now(@connection)
+    account = @connection.accounts.sole
+    first_as_of = account.positions_as_of
+
+    StubConnector.cash_data = 900.0
+    ConnectionJob.perform_now(@connection, as_of: first_as_of + 1.hour)
+
+    older = account.positions.where(as_of: first_as_of).find { |p| p.asset.symbol == "USD" }
+    assert_in_delta 250.0, older.units, 0.001
+    assert_in_delta 900.0, account.reload.current_positions.find { |p| p.asset.symbol == "USD" }.units, 0.001
   end
 
   test "zero cash gets no position" do
