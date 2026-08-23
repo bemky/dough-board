@@ -1,11 +1,21 @@
 <% total = portfolio.sum { |holding| holding[:value] } %>
+<% debts = portfolio.select { |holding| holding[:value] < 0 } %>
 <% tiles = Treemap.layout(portfolio) { |holding| holding[:value] } %>
 <section class="space-y-5">
     <div class="text-center">
         <div class="text-xs font-semibold uppercase tracking-widest text-muted">
-            <%= local_assigns.fetch(:title, "Value") %>
+            <%= local_assigns.fetch(:title, debts.any? ? "Net Worth" : "Value") %>
         </div>
         <div class="mt-2"><%= display_amount total, data: {portfolio_total: true} %></div>
+        <%# The treemap is areas, and a debt has none — so what's owed is said in
+            words above it, and the tiles stay the assets it's netted against. %>
+        <% if debts.any? %>
+            <p class="mx-auto mt-2 max-w-md text-sm text-muted">
+                <span data-portfolio-assets><%= number_to_currency total - debts.sum { |holding| holding[:value] } %></span> in assets,
+                less <%= number_to_currency debts.sum { |holding| -holding[:value] } %> owed
+                (<%= debts.map { |holding| holding[:asset].name.presence || holding[:symbol] }.to_sentence %>)
+            </p>
+        <% end %>
     </div>
 
     <% if tiles.empty? %>

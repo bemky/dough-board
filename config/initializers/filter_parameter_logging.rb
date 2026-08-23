@@ -4,5 +4,8 @@
 # Use this to limit dissemination of sensitive information.
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
-  :passw, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn
+  :passw, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn,
+  # A connection's `credentials` is whatever secret its provider issued for it —
+  # a Plaid access token, which is as good as the connection itself.
+  :credentials
 ]

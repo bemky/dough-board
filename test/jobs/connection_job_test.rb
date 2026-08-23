@@ -76,6 +76,57 @@ class ConnectionJobTest < ActiveSupport::TestCase
     assert_in_delta 1500.0, position.cost_basis, 0.001
   end
 
+  test "a renamed account keeps its name through later syncs" do
+    ConnectionJob.perform_now(@connection)
+    account = @connection.accounts.sole
+    account.update!(name: "Roth IRA")
+
+    ConnectionJob.perform_now(@connection)
+
+    assert_equal "Roth IRA", account.reload.name
+    # Still worth knowing what they call it, even renamed.
+    assert_equal "Individual", account.foreign_name
+    assert account.renamed?
+  end
+
+  test "an account nobody has renamed follows the institution's own rename" do
+    ConnectionJob.perform_now(@connection)
+    account = @connection.accounts.sole
+
+    StubConnector.accounts_data.first[:name] = "Individual Brokerage"
+    ConnectionJob.perform_now(@connection)
+
+    assert_equal "Individual Brokerage", account.reload.name
+    assert_not account.renamed?
+  end
+
+  test "an account the institution does not name falls back to its foreign id" do
+    StubConnector.accounts_data.first[:name] = nil
+
+    ConnectionJob.perform_now(@connection)
+
+    assert_equal "acct-1", @connection.accounts.sole.name
+  end
+  
+  test "a debt account is an account worth less than nothing" do
+    StubConnector.accounts_data = [
+      {foreign_id: "acct-card", name: "Sapphire", number: "X-9", institution_name: "Testbank"}
+    ]
+    StubConnector.positions_data = [
+      {symbol: "DEBT:CREDIT_CARD", name: "Credit Card Debt", type: "liability",
+       units: -1123.45, price: 1.0, currency: "USD"}
+    ]
+
+    ConnectionJob.perform_now(@connection)
+
+    account = @connection.accounts.sole
+    position = account.current_positions.sole
+    assert_equal "liability", position.asset.type
+    assert_in_delta(-1123.45, position.units, 0.001)
+    assert_in_delta(-1123.45, position.value, 0.001)
+    assert_in_delta(-1123.45, account.value, 0.001)
+  end
+
   test "fills in the asset from the instrument, matching the exchange by MIC" do
     exchange = Exchange.create!(code: "NASDAQ", mic_code: "XNAS", name: "Nasdaq Stock Market")
 

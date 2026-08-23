@@ -40,6 +40,14 @@ namespace :worker do
       end
     end
   end
+
+  desc "Tail the Sidekiq worker logs"
+  task :logs do
+    on roles(:app), primary: true do
+      units = fetch(:worker_instances).map { |instance| "-u #{fetch(:application)}-worker@#{instance}.service" }.join(" ")
+      execute "sudo journalctl #{units} -f"
+    end
+  end
 end
 
 after "deploy:finished", "worker:restart"

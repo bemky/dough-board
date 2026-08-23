@@ -37,6 +37,14 @@ gem 'finnhub_ruby'
 # positions and activities [https://github.com/passiv/snaptrade-sdks]
 gem 'snaptrade'
 
+# Plaid's own client, for read-only bank and brokerage connections — balances,
+# investment holdings and investment transactions
+# [https://github.com/plaid/plaid-ruby]. Unlike SnapTrade there is no list of
+# this key's connections to discover: Plaid issues an access token per Item,
+# handed over by Plaid Link, so connections are made in-app and the token is
+# kept on connections.credentials.
+gem 'plaid'
+
 # Writes config/schedule.rb into a crontab entry so quotes can be refreshed
 # on a schedule instead of only on demand [https://github.com/javan/whenever]
 gem "whenever", require: false

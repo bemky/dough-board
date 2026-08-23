@@ -1,9 +1,20 @@
 <% total = accounts.sum(&:value) %>
+<% owing = accounts.select { |account| account.value < 0 } %>
 <% tiles = Treemap.layout(accounts, &:value) %>
 <section class="space-y-5">
     <div class="text-center">
-        <div class="text-xs font-semibold uppercase tracking-widest text-muted">Total Value</div>
+        <div class="text-xs font-semibold uppercase tracking-widest text-muted">
+            <%= owing.any? ? "Net Worth" : "Total Value" %>
+        </div>
         <div class="mt-2"><%= display_amount total %></div>
+        <%# An account that is a debt has no area to tile, so it's named here
+            instead and the tiles below stay the accounts holding something. %>
+        <% if owing.any? %>
+            <p class="mx-auto mt-2 max-w-md text-sm text-muted">
+                After <%= number_to_currency owing.sum { |account| -account.value } %> owed on
+                <%= owing.map { |account| link_to account.label, account_path(account), class: "underline hover:text-ink" }.to_sentence.html_safe %>
+            </p>
+        <% end %>
     </div>
 
     <% if tiles.empty? %>

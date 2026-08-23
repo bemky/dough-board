@@ -18,6 +18,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "$200.00"
   end
 
+  test "index nets a debt account against the rest, and names what it is" do
+    card = Account.create!(institution_name: "Testbank", name: "Card", positions_source: "connection")
+    debt = Asset.create!(symbol: "DEBT:CREDIT_CARD", name: "Credit Card Debt",
+      type: "liability", splits_updated_at: Time.current)
+    Position.create!(account: card, asset: debt, as_of: @as_of, units: -50.0, price: 1.0)
+    card.update!(positions_as_of: @as_of)
+
+    get accounts_path
+    assert_response :success
+    # A debt has no area to tile, so it's said in words instead.
+    assert_select "div", text: /After \$50\.00 owed on/
+    assert_select "div", text: /\$150\.00/
+  end
+
   test "show renders the account's holdings" do
     get account_path(@account)
     assert_response :success
