@@ -28,6 +28,21 @@ class Account < ApplicationRecord
     "#{institution_name} - #{name}"
   end
 
+  # Takes the institution's own name for this account, but only as far as it is
+  # still ours to take. `foreign_name` records what they last reported: while it
+  # matches `name`, nobody has typed a name of their own and a rename on their
+  # side is worth carrying across; once the two differ, the local name is a
+  # deliberate override and a sync leaves it alone.
+  def name_from_institution(institution_name)
+    self.name = institution_name if institution_name.present? && !renamed?
+    self.foreign_name = institution_name
+  end
+
+  # Whether someone has given this account a name of its own.
+  def renamed?
+    name.present? && foreign_name.present? && name != foreign_name
+  end
+
   # Whether DerivePositionsJob owns this account's positions. When it does, a
   # hand-edited position would be rewritten on the job's next run, so the UI
   # doesn't offer to edit one.

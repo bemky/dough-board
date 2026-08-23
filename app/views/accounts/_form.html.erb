@@ -6,6 +6,17 @@
         <div>
             <%= f.label :name, class: label_classes %>
             <%= f.text_field :name, class: field_classes %>
+            <% if account.persisted? && account.connection %>
+                <p class="mt-1 text-xs text-gray-500">
+                    <% if account.renamed? %>
+                        Your name for it. <%= account.connection.label %> calls it
+                        &ldquo;<%= account.foreign_name %>&rdquo;; syncing won't rewrite this.
+                    <% else %>
+                        Named by <%= account.connection.label %>. Rename it and syncing will
+                        leave your name alone.
+                    <% end %>
+                </p>
+            <% end %>
         </div>
         <div>
             <%= f.label :institution_name, class: label_classes %>

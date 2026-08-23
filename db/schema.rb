@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_23_120000) do
   create_table "accounts", force: :cascade do |t|
     t.integer "connection_id"
     t.datetime "created_at", null: false
     t.string "foreign_id"
+    t.string "foreign_name"
     t.string "institution_name"
     t.string "name", null: false
     t.string "number"
