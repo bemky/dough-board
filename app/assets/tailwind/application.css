@@ -1,7 +1,33 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Theme
+   A warm paper canvas, near-black ink, and a single muted gray for anything
+   secondary. Everything below is phone-first: the utilities in the views name
+   the small screen and add `md:` for the desk.
+   --------------------------------------------------------------------------- */
+@theme {
+    --color-canvas: #f5f4ef;
+    --color-surface: #fcfbf8;
+    --color-ink: #14130f;
+    --color-muted: #8b8880;
+    --color-line: #e3e0d8;
+    --color-gain: #4c7a2e;
+    --color-loss: #b3402b;
+
+    /* Treemap tiles: one tonal ramp, so a portfolio reads as one thing. */
+    --color-tile-1: #2f3b2a;
+    --color-tile-2: #4c7a2e;
+    --color-tile-3: #7b8f5a;
+    --color-tile-4: #a8a08a;
+    --color-tile-5: #6b6a62;
+    --color-tile-6: #3c3a33;
+}
+
 body {
     font-family: ui-sans-serif, system-ui, sans-serif;
+    /* Nothing here is wide enough to want a sideways scroll on a phone. */
+    overflow-x: hidden;
 }
 
 /* Hide number input spinners */
@@ -14,4 +40,275 @@ input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+@layer components {
+    /* -----------------------------------------------------------------------
+       Controls
+       ----------------------------------------------------------------------- */
+
+    /* Touch targets are 44px tall and inputs are 16px, which is the size below
+       which iOS Safari zooms the page on focus. */
+    .field {
+        display: block;
+        width: 100%;
+        min-height: 2.75rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        padding: 0.625rem 0.875rem;
+        font-size: 1rem;
+        color: var(--color-ink);
+    }
+    .field:focus {
+        outline: none;
+        border-color: var(--color-ink);
+        box-shadow: 0 0 0 1px var(--color-ink);
+    }
+
+    .label {
+        display: block;
+        margin-bottom: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-muted);
+    }
+
+    .hint {
+        margin-top: 0.375rem;
+        font-size: 0.75rem;
+        color: var(--color-muted);
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.375rem;
+        min-height: 2.75rem;
+        border-radius: 9999px;
+        padding: 0.625rem 1.25rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+        cursor: pointer;
+    }
+    .btn-primary {
+        background: var(--color-ink);
+        color: #fff;
+    }
+    .btn-primary:hover { background: #2c2a22; }
+
+    .btn-secondary {
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        color: var(--color-ink);
+    }
+    .btn-secondary:hover { border-color: var(--color-ink); }
+
+    .btn-danger {
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        color: var(--color-loss);
+    }
+    .btn-danger:hover { border-color: var(--color-loss); }
+
+    /* Small pill for a row's own action — still 36px, thumb-sized enough for a
+       secondary target. */
+    .btn-sm {
+        min-height: 2.25rem;
+        padding: 0.375rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+
+    /* A round icon button, the shape the header actions take. */
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        background: rgb(0 0 0 / 0.05);
+        color: var(--color-ink);
+        flex: none;
+    }
+    .btn-icon:hover { background: rgb(0 0 0 / 0.09); }
+
+    .card {
+        border-radius: 1rem;
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        padding: 1rem;
+    }
+    @media (min-width: 768px) {
+        .card { padding: 1.5rem; }
+    }
+
+    /* -----------------------------------------------------------------------
+       Tabs — underlined, and scrollable sideways when they outrun the screen
+       rather than wrapping or shrinking.
+       ----------------------------------------------------------------------- */
+    .tabs {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border-bottom: 1px solid var(--color-line);
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+        flex: none;
+        border-bottom: 2px solid transparent;
+        padding: 0.75rem 0.125rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--color-muted);
+    }
+    .tab-active {
+        border-bottom-color: var(--color-ink);
+        color: var(--color-ink);
+    }
+
+    /* -----------------------------------------------------------------------
+       The headline number. Cents are set in muted gray at the same size, which
+       is what makes a six-figure balance readable at a glance on a phone.
+       ----------------------------------------------------------------------- */
+    .amount {
+        font-size: 2.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: var(--color-ink);
+    }
+    @media (min-width: 768px) {
+        .amount { font-size: 3rem; }
+    }
+    .amount-fraction { color: var(--color-muted); }
+
+    /* -----------------------------------------------------------------------
+       Data tables
+       One markup, two shapes. On a desk it is a table. On a phone every row
+       becomes a card: cells carry a role — primary/secondary on the left,
+       amount/meta on the right — and the header row is hidden, because a card
+       says what each number is by where it sits.
+       ----------------------------------------------------------------------- */
+    /* A table has a width its content will not go below, and beside a sidebar
+       that width can outrun the column it sits in — so it scrolls inside its
+       own box rather than spilling over whatever is next to it. Phones don't
+       need it: there the rows are cards, and cards fit. */
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9375rem;
+    }
+    .data-table thead tr {
+        border-bottom: 1px solid var(--color-line);
+        text-align: left;
+        font-size: 0.8125rem;
+        color: var(--color-muted);
+    }
+    .data-table th {
+        padding: 0.5rem 1rem 0.5rem 0;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .data-table th:last-child, .data-table td:last-child { padding-right: 0; }
+    .data-table tbody tr { border-bottom: 1px solid var(--color-line); }
+    .data-table td { padding: 0.75rem 1rem 0.75rem 0; }
+    .cell-amount, .cell-meta, .cell-detail-amount { text-align: right; }
+    .cell-primary { font-weight: 600; }
+    .cell-secondary, .cell-meta, .cell-detail, .cell-detail-amount, .cell-caption {
+        color: var(--color-muted);
+    }
+    .cell-action { text-align: right; }
+
+    @media (min-width: 768px) {
+        /* A column of numbers or dates reads as one thing only if no cell in it
+           wraps; a name that would is cut off instead. */
+        .cell-secondary, .cell-meta, .cell-detail, .cell-detail-amount, .cell-amount {
+            white-space: nowrap;
+        }
+        .cell-caption {
+            max-width: 12rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .data-table, .data-table tbody, .data-table tr, .data-table td {
+            display: block;
+            width: 100%;
+        }
+        .data-table thead { display: none; }
+        .data-table tbody tr {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: baseline;
+            column-gap: 0.75rem;
+            padding: 0.875rem 0;
+        }
+        .data-table td { padding: 0; }
+        /* Each role owns a cell of the card, so a row reads the same on every
+           table no matter what order the desk's columns happen to be in. Rows
+           nothing is placed in collapse to nothing. */
+        .data-table .cell-primary {
+            grid-area: 1 / 1;
+            font-size: 1rem;
+        }
+        .data-table .cell-amount {
+            grid-area: 1 / 2;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .data-table .cell-secondary {
+            grid-area: 2 / 1;
+            font-size: 0.875rem;
+            margin-top: 0.125rem;
+        }
+        .data-table .cell-meta {
+            grid-area: 2 / 2;
+            font-size: 0.875rem;
+            margin-top: 0.125rem;
+        }
+        .data-table .cell-detail {
+            grid-area: 3 / 1;
+            font-size: 0.875rem;
+        }
+        .data-table .cell-detail-amount {
+            grid-area: 3 / 2;
+            font-size: 0.875rem;
+        }
+        .data-table .cell-caption {
+            grid-area: 4 / 1 / 4 / -1;
+            font-size: 0.8125rem;
+            margin-top: 0.25rem;
+        }
+        /* A cell can say what it is on a phone, where there is no header row
+           left to say it. */
+        .data-table td[data-label]::before {
+            content: attr(data-label) " ";
+            color: var(--color-muted);
+        }
+        /* An action sits under the pair rather than squeezing a third column
+           into a screen this narrow. A cell with no link in it holds nothing to
+           show. */
+        .data-table .cell-action {
+            grid-area: 5 / 1 / 5 / -1;
+            margin-top: 0.625rem;
+            text-align: left;
+        }
+        .data-table .cell-action:not(:has(*)) { display: none; }
+        /* A cell with no role is desk-only detail. */
+        .data-table td:not([class*="cell-"]) { display: none; }
+    }
 }

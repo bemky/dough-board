@@ -1,17 +1,19 @@
-<div class="p-8 space-y-8">
-    <div class="flex items-start justify-between">
+<div class="space-y-8">
+    <div class="space-y-4">
         <div>
-            <h1 class="text-2xl font-bold">Connections</h1>
-            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            <h1 class="text-xl font-bold tracking-tight md:text-2xl">Connections</h1>
+            <p class="mt-1 max-w-2xl text-sm text-muted">
                 Read-only links to an institution. Some providers are connected to on
                 their own site and picked up here by Discover; others hand over one
                 connection at a time through Connect.
             </p>
         </div>
-        <div class="flex gap-2">
+        <%# Full-width buttons stacked on a phone, side by side once there's room. %>
+        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <% Connectors.discoverable.each do |connector| %>
                 <%= button_to "Discover #{connector.titleize}", discover_connections_path(connector: connector),
-                    class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+                    form: {class: "w-full sm:w-auto"},
+                    class: "btn btn-primary w-full sm:w-auto" %>
             <% end %>
             <%# One button per kind: a provider shows only the institutions that
                 support everything asked of them, and a brokerage and a card
@@ -19,7 +21,7 @@
             <% Connectors.linkable.each do |connector| %>
                 <% Connectors::Base::LINK_KINDS.each do |kind, label| %>
                     <%= link_to "Connect #{connector.titleize}: #{label}", link_connections_path(connector: connector, kind: kind),
-                        class: "inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+                        class: "btn btn-primary w-full sm:w-auto" %>
                 <% end %>
             <% end %>
         </div>

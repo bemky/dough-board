@@ -1,39 +1,41 @@
 <% empty_message = local_assigns.fetch(:empty_message, "No Assets") %>
-<table class="w-full border-collapse">
+<div class="table-scroll">
+<table class="data-table">
     <thead>
-        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
-            <th class="py-2 pr-4 font-semibold">Symbol</th>
-            <th class="py-2 pr-4 font-semibold">Type</th>
-            <th class="py-2 pr-4 font-semibold text-right">Units</th>
-            <th class="py-2 pr-4 font-semibold text-right">Price</th>
-            <th class="py-2 pr-4 font-semibold text-right">Value</th>
-            <th class="py-2"></th>
+        <tr>
+            <th>Symbol</th>
+            <th>Type</th>
+            <th class="text-right">Units</th>
+            <th class="text-right">Price</th>
+            <th class="text-right">Value</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
     <% portfolio.each do |holding| %>
-        <tr class="border-b border-gray-100">
-            <td class="py-2 pr-4 font-semibold"><%= holding[:symbol] %></td>
-            <td class="py-2 pr-4 text-gray-500"><%= holding[:asset].type %></td>
-            <td class="py-2 pr-4 text-right"><%= holding[:units].round(4) %></td>
+        <tr>
+            <td class="cell-primary"><%= holding[:symbol] %></td>
+            <td class="cell-detail"><%= holding[:asset].type %></td>
+            <td class="cell-secondary" data-label="Units"><%= holding[:units].round(4) %></td>
             <%# data-quantity is the JS's name for whatever the price multiplies by. %>
-            <td class="py-2 pr-4 text-right" data-quote-symbol="<%= holding[:symbol] %>" data-quantity="<%= holding[:units] %>">
+            <td class="cell-meta" data-quote-symbol="<%= holding[:symbol] %>" data-quantity="<%= holding[:units] %>">
                 <% if holding[:price] %>
                     <span data-quote-price><%= number_to_currency(holding[:price]) %></span>
                 <% else %>
-                    <span class="text-xs text-gray-400" data-quote-price>Loading&hellip;</span>
+                    <span class="text-xs text-muted" data-quote-price>Loading&hellip;</span>
                 <% end %>
             </td>
-            <td class="py-2 pr-4 text-right" data-quote-value>
-                <%= holding[:price] ? number_to_currency(holding[:value]) : content_tag(:span, "&mdash;".html_safe, class: "text-gray-400") %>
+            <td class="cell-amount" data-quote-value>
+                <%= holding[:price] ? number_to_currency(holding[:value]) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
             </td>
-            <td class="py-2 text-right">
-                <%= link_to "Edit", edit_asset_path(holding[:asset]), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>
+            <td class="cell-action">
+                <%= link_to "Edit", edit_asset_path(holding[:asset]), class: "btn btn-secondary btn-sm" %>
             </td>
         </tr>
     <% end %>
     </tbody>
 </table>
+</div>
 <% if portfolio.empty? %>
-    <p class="text-gray-500 mt-4"><%= empty_message %></p>
+    <p class="mt-4 text-sm text-muted"><%= empty_message %></p>
 <% end %>

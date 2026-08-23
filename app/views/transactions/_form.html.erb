@@ -1,5 +1,5 @@
-<% field_classes = "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" %>
-<% label_classes = "block text-sm font-medium text-gray-700 mb-1" %>
+<% field_classes = "field" %>
+<% label_classes = "label" %>
 <%= form_for transaction do |f| %>
     <%= hidden_field_tag "redirect_to", "/" %>
     <div class="space-y-4">
@@ -14,7 +14,7 @@
         <div>
             <%= f.label :account_id, "Account", class: label_classes %>
             <%= f.collection_select :account_id, Account.order(:institution_name, :name), :id, :label, { prompt: "Select account" }, class: field_classes %>
-            <%= link_to "+ Add account", new_account_path, class: "text-xs text-gray-500 hover:text-gray-700" %>
+            <%= link_to "+ Add account", new_account_path, class: "hint underline" %>
         </div>
         <div>
             <%= f.label :type, class: label_classes %>
@@ -32,7 +32,7 @@
             <%= f.label :foreign_id, "Order ID", class: label_classes %>
             <%= f.text_field :foreign_id, class: field_classes %>
         </div>
-        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+        <button type="submit" class="btn btn-primary w-full md:w-auto">
             <%= transaction.persisted? ? "Save" : "Add" %>
         </button>
     </div>

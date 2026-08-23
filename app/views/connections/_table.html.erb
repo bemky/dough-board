@@ -1,52 +1,54 @@
-<table class="w-full border-collapse">
+<div class="table-scroll">
+<table class="data-table">
     <thead>
-        <tr class="border-b border-gray-200 text-left text-gray-500 text-sm">
-            <th class="py-2 pr-4"><%= sort_header "Institution", :financial_institution %></th>
-            <th class="py-2 pr-4"><%= sort_header "Connector", :connector %></th>
-            <th class="py-2 pr-4 font-semibold text-right">Accounts</th>
-            <th class="py-2 pr-4"><%= sort_header "Last Sync", :synced_at %></th>
-            <th class="py-2"></th>
+        <tr>
+            <th><%= sort_header "Institution", :financial_institution %></th>
+            <th><%= sort_header "Connector", :connector %></th>
+            <th class="text-right">Accounts</th>
+            <th><%= sort_header "Last Sync", :synced_at %></th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
     <% connections.each do |connection| %>
-        <tr class="border-b border-gray-100">
-            <td class="py-2 pr-4">
-                <span class="font-semibold"><%= connection.financial_institution.presence || "Unknown" %></span>
+        <tr>
+            <td class="cell-primary">
+                <span><%= connection.financial_institution.presence || "Unknown" %></span>
                 <% if connection.disabled? %>
-                    <span class="ml-1 rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700">disabled</span>
+                    <span class="ml-1 rounded-full bg-loss/10 px-2 py-0.5 text-xs font-medium text-loss">disabled</span>
                 <% end %>
                 <% if connection.name.present? %>
-                    <span class="block text-xs text-gray-500"><%= connection.name %></span>
+                    <span class="block text-xs font-normal text-muted"><%= connection.name %></span>
                 <% end %>
             </td>
-            <td class="py-2 pr-4 text-gray-500"><%= connection.connector %></td>
-            <td class="py-2 pr-4 text-right"><%= connection.accounts.size %></td>
-            <td class="py-2 pr-4 text-gray-500">
+            <td class="cell-secondary"><%= connection.connector %></td>
+            <td class="cell-meta" data-label="Accounts:"><%= connection.accounts.size %></td>
+            <td class="cell-detail">
                 <% if connection.synced_at %>
-                    <%= time_ago_in_words(connection.synced_at) %> ago
+                    Synced <%= time_ago_in_words(connection.synced_at) %> ago
                 <% else %>
-                    <span class="text-gray-400">Never</span>
+                    <span class="text-muted">Never</span>
                 <% end %>
                 <% if connection.last_error.present? %>
-                    <span class="block text-xs text-red-600" data-tooltip="<%= connection.last_error %>">Last sync failed</span>
+                    <span class="block text-xs text-loss" data-tooltip="<%= connection.last_error %>">Last sync failed</span>
                 <% end %>
             </td>
-            <td class="py-2 text-right">
+            <td class="cell-action">
                 <%# Signing in again is the only thing that fixes an expired
                     connection, so it leads when that's what's wrong. %>
                 <% if connection.linkable? && connection.needs_reauthorization? %>
                     <%= link_to "Reconnect", link_connections_path(connection_id: connection.id),
-                        class: "mr-1 inline-flex items-center rounded-md border border-red-300 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100" %>
+                        class: "btn btn-danger btn-sm mr-1" %>
                 <% end %>
                 <%= button_to "Sync", sync_connection_path(connection),
                     form: {class: "inline"},
-                    class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700" %>
+                    class: "btn btn-secondary btn-sm" %>
             </td>
         </tr>
     <% end %>
     </tbody>
 </table>
+</div>
 <% if connections.empty? %>
-    <p class="text-gray-500 mt-4">No connections yet. Connect an institution on the provider's site, then Discover.</p>
+    <p class="mt-4 text-sm text-muted">No connections yet. Connect an institution on the provider's site, then Discover.</p>
 <% end %>

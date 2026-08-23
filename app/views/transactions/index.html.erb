@@ -1,4 +1,4 @@
-<div class="p-8 space-y-8">
+<div class="space-y-8">
     <% if @account %>
         <%= render partial: 'accounts/header', locals: {account: @account, tab: :transactions} %>
 
@@ -12,8 +12,13 @@
 
         <%= render partial: 'transactions/pagination', locals: {page: @page, per_page: @per_page, total_pages: @total_pages, total_count: @total_count} %>
     <% else %>
-        <div class="flex gap-8">
-            <div class="flex-1">
+        <h1 class="text-xl font-bold tracking-tight md:text-2xl">Transactions</h1>
+
+        <%# One column until xl — the list, then the things you can add. The
+            sidebar only comes alongside on a screen wide enough to keep the
+            table off it; below that it would squeeze the table into a scroll. %>
+        <div class="xl:flex xl:items-start xl:gap-8">
+            <div class="min-w-0 xl:flex-1">
                 <%= render partial: 'transactions/table', locals: {
                     transactions: @transactions,
                     symbols: @symbols,
@@ -21,16 +26,23 @@
                 } %>
                 <%= render partial: 'transactions/pagination', locals: {page: @page, per_page: @per_page, total_pages: @total_pages, total_count: @total_count} %>
             </div>
-            <div class="w-80 shrink-0 space-y-8">
-                <div class="rounded-xl bg-gray-100 p-8">
-                    <h3 class="mb-4 text-lg font-semibold">Add Transaction</h3>
+
+            <div class="mt-10 space-y-6 xl:mt-0 xl:w-80 xl:shrink-0">
+                <section id="add-transaction" class="card scroll-mt-20">
+                    <h2 class="mb-4 text-base font-semibold">Add Transaction</h2>
                     <%= render partial: 'transactions/form', locals: {transaction: Transaction.new} %>
-                </div>
-                <div class="rounded-xl bg-gray-100 p-8">
-                    <h3 class="mb-4 text-lg font-semibold">Import CSV</h3>
+                </section>
+                <section id="import-csv" class="card scroll-mt-20">
+                    <h2 class="mb-4 text-base font-semibold">Import CSV</h2>
                     <%= render partial: 'transactions/import_form' %>
-                </div>
+                </section>
             </div>
+        </div>
+
+        <%# The one action this page is for, kept in reach of a thumb. It sits
+            above the tab bar, which owns the bottom of the screen. %>
+        <div class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-20 px-4 md:hidden">
+            <%= link_to "Add Transaction", "#add-transaction", class: "btn btn-primary w-full shadow-lg" %>
         </div>
     <% end %>
 </div>

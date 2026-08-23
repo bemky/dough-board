@@ -1,33 +1,28 @@
 <% total = accounts.sum(&:value) %>
 <% owing = accounts.select { |account| account.value < 0 } %>
-<div>
-    <div class="font-bold uppercase text-gray-500"><%= owing.any? ? "Net Worth" : "Total Value" %></div>
-    <div class="text-2xl font-bold mb-2"><%= number_to_currency total %></div>
-    <%# An account that is a debt has no area to tile, so it's named here
-        instead and the tiles below stay the accounts holding something. %>
-    <% if owing.any? %>
-        <div class="mb-2 text-sm text-gray-500">
-            After <%= number_to_currency owing.sum { |account| -account.value } %> owed on
-            <%= owing.map { |account| link_to account.label, account_path(account), class: "underline hover:text-gray-700" }.to_sentence.html_safe %>
+<% tiles = Treemap.layout(accounts, &:value) %>
+<section class="space-y-5">
+    <div class="text-center">
+        <div class="text-xs font-semibold uppercase tracking-widest text-muted">
+            <%= owing.any? ? "Net Worth" : "Total Value" %>
         </div>
-    <% end %>
-    <% tiles = Treemap.layout(accounts, &:value) %>
+        <div class="mt-2"><%= display_amount total %></div>
+        <%# An account that is a debt has no area to tile, so it's named here
+            instead and the tiles below stay the accounts holding something. %>
+        <% if owing.any? %>
+            <p class="mx-auto mt-2 max-w-md text-sm text-muted">
+                After <%= number_to_currency owing.sum { |account| -account.value } %> owed on
+                <%= owing.map { |account| link_to account.label, account_path(account), class: "underline hover:text-ink" }.to_sentence.html_safe %>
+            </p>
+        <% end %>
+    </div>
+
     <% if tiles.empty? %>
-        <p class="text-gray-500">No accounts with value</p>
+        <p class="text-center text-sm text-muted">No accounts with value</p>
     <% else %>
-        <% colors = %w(bg-blue-500 bg-purple-500 bg-green-600 bg-yellow-600 bg-red-500 bg-gray-500) %>
-        <div class="relative h-96 w-full rounded overflow-hidden">
-            <% tiles.each_with_index do |tile, index| %>
-                <%= link_to account_path(tile.item),
-                        data: {tooltip: "#{tile.item.label}: #{number_to_currency tile.item.value}"},
-                        class: "absolute overflow-hidden p-1 text-white leading-tight border border-white/40 #{colors[index % colors.length]}",
-                        style: "left:#{tile.x}%; top:#{tile.y}%; width:#{tile.width}%; height:#{tile.height}%" do %>
-                    <div class="text-xs font-bold truncate"><%= tile.item.label %></div>
-                    <% if tile.width > 8 && tile.height > 10 %>
-                        <div class="text-[10px] truncate"><%= number_to_currency tile.item.value %></div>
-                    <% end %>
-                <% end %>
-            <% end %>
-        </div>
+        <%= render partial: 'shared/treemap', locals: {cells: tiles.map { |tile|
+            {x: tile.x, y: tile.y, width: tile.width, height: tile.height,
+             label: tile.item.label, amount: tile.item.value, path: account_path(tile.item)}
+        }} %>
     <% end %>
-</div>
+</section>

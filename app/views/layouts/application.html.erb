@@ -2,7 +2,11 @@
 <html>
   <head>
     <title>DoughBoard</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%# viewport-fit=cover so the bottom bar can sit under the home indicator
+        and pad itself back out with the safe-area inset. %>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#f5f4ef">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
@@ -10,32 +14,55 @@
     <%= javascript_include_tag 'boot', 'data-turbo-track': 'reload', defer: true %>
   </head>
 
-  <body class="min-h-screen bg-gray-50 text-gray-900 antialiased">
-    <nav class="border-b border-gray-200 bg-white px-8">
-      <div class="flex items-center justify-between gap-8">
-        <div class="flex items-center gap-8">
-          <%= link_to "DoughBoard", root_path, class: "font-bold" %>
-          <% if session[:logged_in] %>
-            <div class="flex gap-6">
-              <%= nav_tab "Assets", assets_path, controller_name == "assets" %>
-              <%= nav_tab "Accounts", accounts_path, controller_name == "accounts" %>
-              <%= nav_tab "Connections", connections_path, controller_name == "connections" %>
-              <%= nav_tab "Positions", positions_path, controller_name == "positions" %>
-              <%= nav_tab "Transactions", transactions_path, controller_name == "transactions" %>
-            </div>
-          <% end %>
-        </div>
+  <body class="min-h-screen bg-canvas text-ink antialiased">
+    <header class="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+        <%= link_to "DoughBoard", root_path, class: "text-base font-bold tracking-tight" %>
+
+        <%# The full set of destinations, on a screen wide enough to hold them.
+            On a phone they are the bar at the bottom of this file instead. %>
         <% if session[:logged_in] %>
-          <%= button_to "Log out", logout_path, method: :delete, class: "text-sm text-gray-500 hover:text-gray-700" %>
+          <nav class="hidden md:flex md:items-center md:gap-6">
+            <% nav_destinations.each do |destination| %>
+              <%= nav_tab destination[:title], destination[:path], destination[:active] %>
+            <% end %>
+          </nav>
+          <%= button_to logout_path, method: :delete, class: "btn btn-secondary btn-sm" do %>
+            Log out
+          <% end %>
         <% end %>
       </div>
-    </nav>
-    <% if flash[:notice] %>
-      <div class="bg-green-100 border-b border-green-200 px-8 py-3 text-sm text-green-800"><%= flash[:notice] %></div>
+    </header>
+
+    <% if flash[:notice] || flash[:alert] %>
+      <div class="mx-auto max-w-6xl px-4 pt-4 md:px-8">
+        <% if flash[:notice] %>
+          <p class="rounded-xl border border-gain/30 bg-gain/10 px-4 py-3 text-sm text-gain"><%= flash[:notice] %></p>
+        <% end %>
+        <% if flash[:alert] %>
+          <p class="rounded-xl border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss"><%= flash[:alert] %></p>
+        <% end %>
+      </div>
     <% end %>
-    <% if flash[:alert] %>
-      <div class="bg-red-100 border-b border-red-200 px-8 py-3 text-sm text-red-800"><%= flash[:alert] %></div>
+
+    <%# The bottom padding clears the tab bar; a phone's last row would sit
+        under it otherwise. %>
+    <main class="mx-auto max-w-6xl px-4 py-6 pb-28 md:px-8 md:py-10 md:pb-10">
+      <%= yield %>
+    </main>
+
+    <% if session[:logged_in] %>
+      <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+        <div class="flex items-stretch justify-around">
+          <% nav_destinations.each do |destination| %>
+            <%= link_to destination[:path],
+                  class: "flex flex-1 flex-col items-center gap-1 px-1 py-2 text-[11px] font-semibold #{destination[:active] ? "text-ink" : "text-muted"}" do %>
+              <%= nav_icon destination[:icon] %>
+              <span class="truncate"><%= destination[:short] %></span>
+            <% end %>
+          <% end %>
+        </div>
+      </nav>
     <% end %>
-    <%= yield %>
   </body>
 </html>

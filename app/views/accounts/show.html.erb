@@ -1,12 +1,15 @@
-<div class="p-8 space-y-8">
+<div class="space-y-8">
     <%= render partial: 'accounts/header', locals: {account: @account, tab: :assets} %>
 
     <% portfolio = @account.portfolio %>
 
     <%= render partial: 'transactions/portfolio', locals: {portfolio: portfolio} %>
 
-    <%= render partial: 'assets/table', locals: {
-        portfolio: portfolio,
-        empty_message: "No assets for this account."
-    } %>
+    <section class="space-y-2">
+        <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Holdings</h2>
+        <%= render partial: 'assets/table', locals: {
+            portfolio: portfolio,
+            empty_message: "No assets for this account."
+        } %>
+    </section>
 </div>

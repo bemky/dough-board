@@ -1,37 +1,29 @@
 <% total = portfolio.sum { |holding| holding[:value] } %>
 <% debts = portfolio.select { |holding| holding[:value] < 0 } %>
-<div>
-    <div class="font-bold uppercase text-gray-500">
-        <%= local_assigns.fetch(:title, debts.any? ? "Net Worth" : "Value") %>
-    </div>
-    <div class="text-2xl font-bold mb-2" data-portfolio-total>
-        <%= number_to_currency total %>
-    </div>
-    <%# The treemap is areas, and a debt has none — so what's owed is said in
-        words above it, and the tiles stay the assets it's netted against. %>
-    <% if debts.any? %>
-        <div class="mb-2 text-sm text-gray-500">
-            <span data-portfolio-assets><%= number_to_currency total - debts.sum { |holding| holding[:value] } %></span> in assets,
-            less <%= number_to_currency debts.sum { |holding| -holding[:value] } %> owed
-            (<%= debts.map { |holding| holding[:asset].name.presence || holding[:symbol] }.to_sentence %>)
+<% tiles = Treemap.layout(portfolio) { |holding| holding[:value] } %>
+<section class="space-y-5">
+    <div class="text-center">
+        <div class="text-xs font-semibold uppercase tracking-widest text-muted">
+            <%= local_assigns.fetch(:title, debts.any? ? "Net Worth" : "Value") %>
         </div>
-    <% end %>
-    <% tiles = Treemap.layout(portfolio) { |holding| holding[:value] } %>
+        <div class="mt-2"><%= display_amount total, data: {portfolio_total: true} %></div>
+        <%# The treemap is areas, and a debt has none — so what's owed is said in
+            words above it, and the tiles stay the assets it's netted against. %>
+        <% if debts.any? %>
+            <p class="mx-auto mt-2 max-w-md text-sm text-muted">
+                <span data-portfolio-assets><%= number_to_currency total - debts.sum { |holding| holding[:value] } %></span> in assets,
+                less <%= number_to_currency debts.sum { |holding| -holding[:value] } %> owed
+                (<%= debts.map { |holding| holding[:asset].name.presence || holding[:symbol] }.to_sentence %>)
+            </p>
+        <% end %>
+    </div>
+
     <% if tiles.empty? %>
-        <p class="text-gray-500">No holdings</p>
+        <p class="text-center text-sm text-muted">No holdings</p>
     <% else %>
-        <% colors = %w(bg-blue-500 bg-purple-500 bg-green-600 bg-yellow-600 bg-red-500 bg-gray-500) %>
-        <div class="relative h-96 w-full rounded overflow-hidden">
-            <% tiles.each_with_index do |tile, index| %>
-                <div data-tooltip="<%= tile.item[:symbol] %>: <%= number_to_currency tile.item[:value] %>" tabindex="0"
-                     class="absolute overflow-hidden p-1 text-white leading-tight border border-white/40 <%= colors[index % colors.length] %>"
-                     style="left:<%= tile.x %>%; top:<%= tile.y %>%; width:<%= tile.width %>%; height:<%= tile.height %>%">
-                    <div class="text-xs font-bold truncate"><%= tile.item[:symbol] %></div>
-                    <% if tile.width > 8 && tile.height > 10 %>
-                        <div class="text-[10px] truncate"><%= number_to_currency tile.item[:value] %></div>
-                    <% end %>
-                </div>
-            <% end %>
-        </div>
+        <%= render partial: 'shared/treemap', locals: {cells: tiles.map { |tile|
+            {x: tile.x, y: tile.y, width: tile.width, height: tile.height,
+             label: tile.item[:symbol], amount: tile.item[:value], path: nil}
+        }} %>
     <% end %>
-</div>
+</section>
