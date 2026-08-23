@@ -36,10 +36,12 @@ class ConnectionJob < ApplicationJob
 
   def upsert_account(connection, attributes)
     account = Account.find_or_initialize_by(connection: connection, foreign_id: attributes[:foreign_id])
-    account.assign_attributes(attributes.except(:foreign_id))
+    # The name is assigned apart from the rest: a person can rename a synced
+    # account, and that rename has to survive every later sync.
+    account.assign_attributes(attributes.except(:foreign_id, :name))
     # An account a connector created is one a connector maintains.
     account.positions_source = "connection"
-    account.name = account.foreign_id if account.name.blank?
+    account.name_from_institution(attributes[:name].presence || attributes[:foreign_id])
     account.save!
     account
   end
