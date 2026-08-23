@@ -1,3 +1,5 @@
+require "sidekiq/web"
+
 Rails.application.routes.draw do
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
@@ -8,6 +10,22 @@ Rails.application.routes.draw do
   get "login", to: "sessions#new", as: :login
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
+
+  # Sidekiq's dashboard: queue depth, retries, and what the workers are doing.
+  # It's a Rack app, so ApplicationController's require_login never runs for it
+  # — LoggedInConstraint is that check. Referenced through a lambda so the
+  # constant resolves per request rather than when routes are drawn, which keeps
+  # it reloadable in development.
+  constraints ->(request) { LoggedInConstraint.matches?(request) } do
+    mount Sidekiq::Web => "/jobs", as: :jobs
+  end
+
+  # A failed constraint otherwise falls through to a routing error, so a logged
+  # out owner would get a bare 404 with nothing to act on. Send them to the same
+  # login form as the rest of the app, and back here once they're through.
+  match "/jobs(/*path)", via: :all, to: redirect(status: 302) { |_params, request|
+    Rails.application.routes.url_helpers.login_path(redirect_to: request.fullpath)
+  }
 
   root "assets#index"
 
