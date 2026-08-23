@@ -7,7 +7,11 @@ namespace :plaid do
   # and unlimited.
   #
   #   bin/rails plaid:sandbox                  # Vanguard, the investments fixture
+  #   bin/rails plaid:sandbox[ins_109508]      # First Platypus, the liabilities one
   #   bin/rails plaid:sandbox[ins_109512]      # some other test institution
+  #
+  # The institution decides what can be asked of it — see #sandbox_public_token,
+  # which narrows the products to the ones it lists.
   #
   # Refuses to run unless the credentials on hand are sandbox ones, so it can't
   # quietly burn a real connection.

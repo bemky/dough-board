@@ -149,11 +149,18 @@ function initQuoteRefresh() {
     const totalEl = document.querySelector('[data-portfolio-total]')
     if (!totalEl) return
     let total = 0
+    // Debts are negative rows, so the total is a net worth and the assets half
+    // of the breakdown beside it is the positive rows on their own.
+    let assets = 0
     document.querySelectorAll('[data-quote-value]').forEach((el) => {
       const amount = parseFloat(el.textContent.replace(/[^0-9.-]/g, ''))
-      if (Number.isFinite(amount)) total += amount
+      if (!Number.isFinite(amount)) return
+      total += amount
+      if (amount > 0) assets += amount
     })
     totalEl.textContent = formatCurrency(total)
+    const assetsEl = document.querySelector('[data-portfolio-assets]')
+    if (assetsEl) assetsEl.textContent = formatCurrency(assets)
   }
 
   cellsBySymbol.forEach((cells, symbol) => {

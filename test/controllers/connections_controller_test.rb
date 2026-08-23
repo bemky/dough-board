@@ -67,15 +67,16 @@ class ConnectionsControllerTest < ActionDispatch::IntegrationTest
   class StubLinkConnector < Connectors::Base
     class << self
       attr_accessor :connect_attributes, :error
-      attr_reader :link_token_for, :exchanged
+      attr_reader :link_token_for, :link_token_kind, :exchanged
 
       def discoverable? = false
       def linkable? = true
       def configured? = true
 
-      def link_token(connection = nil)
+      def link_token(connection = nil, kind: LINK_KINDS.keys.first)
         raise Connectors::ConnectionError, error if error
         @link_token_for = connection
+        @link_token_kind = kind
         "link-sandbox-token"
       end
 
@@ -88,7 +89,7 @@ class ConnectionsControllerTest < ActionDispatch::IntegrationTest
       def reset!
         @connect_attributes = {foreign_id: "item-1", credentials: {"access_token" => "access-1"},
           financial_institution: "Wells Fargo", financial_institution_slug: "ins_1"}
-        @error = @link_token_for = @exchanged = nil
+        @error = @link_token_for = @link_token_kind = @exchanged = nil
       end
     end
   end
@@ -118,11 +119,16 @@ class ConnectionsControllerTest < ActionDispatch::IntegrationTest
       get connections_path
       assert_response :success
 
-      assert_select "a[href=?]", link_connections_path(connector: "stub"), text: "Connect Stub"
+      # One link per kind: an institution that does brokerages and one that does
+      # credit cards are rarely the same institution.
+      assert_select "a[href=?]", link_connections_path(connector: "stub", kind: "holdings"),
+        text: "Connect Stub: bank or brokerage"
+      assert_select "a[href=?]", link_connections_path(connector: "stub", kind: "debts"),
+        text: "Connect Stub: card or loan"
       assert_select "button", text: "Discover Found"
       # Neither connector is offered the other's way of connecting.
       assert_select "button", text: "Discover Stub", count: 0
-      assert_select "a[href=?]", link_connections_path(connector: "found"), count: 0
+      assert_select "a[href^=?]", link_connections_path(connector: "found"), count: 0
     end
   end
 
@@ -132,6 +138,19 @@ class ConnectionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "[data-plaid-link=?]", "link-sandbox-token"
       assert_nil StubLinkConnector.link_token_for
+    end
+  end
+
+  test "link asks for the kind of institution the button named" do
+    with_stub_connector do
+      get link_connections_path(connector: "stub", kind: "debts")
+      assert_response :success
+      assert_equal "debts", StubLinkConnector.link_token_kind
+      assert_select "h1", text: /card or loan/
+
+      # An unknown kind falls back rather than asking the provider for nonsense.
+      get link_connections_path(connector: "stub", kind: "houses")
+      assert_equal "holdings", StubLinkConnector.link_token_kind
     end
   end
 
