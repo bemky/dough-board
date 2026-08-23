@@ -67,7 +67,7 @@ module Connectors
         instrument = position.instrument
         next unless instrument&.symbol
         {
-          symbol: instrument.symbol,
+          symbol: canonical_symbol(instrument.symbol),
           name: instrument.description,
           type: ASSET_TYPES[instrument.kind],
           # A plain MIC code ("XNAS"), not the exchange's short name.
@@ -178,7 +178,7 @@ module Connectors
       return unless type
       {
         foreign_id: activity.id,
-        symbol: activity.symbol&.raw_symbol || activity.symbol&.symbol,
+        symbol: canonical_symbol(activity.symbol&.raw_symbol || activity.symbol&.symbol),
         type: type,
         executed_at: activity.trade_date || activity.settlement_date,
         quantity: activity.units,
