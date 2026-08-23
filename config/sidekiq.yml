@@ -1,6 +1,14 @@
-# Loaded automatically by `sidekiq` unless the systemd unit passes its own -C.
-# Every job this app has (LoadSplitsJob) is a slow external scrape, so a small
-# pool is plenty — the work is IO-bound and low-volume.
+# Loaded automatically by `sidekiq`. The systemd worker unit must not pass its
+# own -C or -q, or this file stops applying — see BUILD.md section 7.
+#
+# The work is IO-bound and low-volume, so a small pool is plenty.
 :concurrency: 5
+
+# Weighted, not strictly ordered. `scrapes` holds LoadSplitsJob, which fetches
+# splithistory.com one asset at a time and arrives in the thousands after a
+# sync — putting it on `default` meant a Sync someone was waiting on sat behind
+# every scrape ahead of it. The weights let it keep making progress without
+# ever being the only thing a worker looks at.
 :queues:
-  - default
+  - [default, 4]
+  - [scrapes, 1]

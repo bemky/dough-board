@@ -130,6 +130,32 @@ class ConnectionJobTest < ActiveSupport::TestCase
     assert_equal %w(AAPL), account.current_positions.map { |p| p.asset.symbol }
   end
 
+  # Coinbase reports a row per wallet, so a vault and a default wallet holding
+  # the same coin arrive as two rows for one account.
+  test "several rows for one symbol combine into a single holding" do
+    StubConnector.positions_data << {symbol: "AAPL", name: "Apple Inc", type: "stock",
+      units: 30.0, price: 200.0, average_price: 100.0, currency: "USD"}
+
+    ConnectionJob.perform_now(@connection)
+
+    position = @connection.accounts.sole.current_positions.sole
+    assert_equal "AAPL", position.asset.symbol
+    assert_equal 40.0, position.units
+    # (10 * 150 + 30 * 100) / 40
+    assert_equal 112.5, position.average_price
+  end
+
+  test "combining ignores rows that report no cost" do
+    StubConnector.positions_data << {symbol: "AAPL", name: "Apple Inc", type: "stock",
+      units: 10.0, price: 200.0, currency: "USD"}
+
+    ConnectionJob.perform_now(@connection)
+
+    position = @connection.accounts.sole.current_positions.sole
+    assert_equal 20.0, position.units
+    assert_equal 150.0, position.average_price
+  end
+
   test "cash rides along as a position against a cash asset" do
     StubConnector.cash_data = 250.0
 

@@ -3,7 +3,11 @@
 # can be down: transactions save immediately with an unadjusted quantity and are
 # corrected when this lands.
 class LoadSplitsJob < ApplicationJob
-  queue_as :default
+  # Its own queue: a sync creates an asset per new symbol, so these arrive in
+  # the thousands and each one waits on a slow third-party page. On `default`
+  # they sat in front of whatever a person was waiting for. See
+  # config/sidekiq.yml for the weighting.
+  queue_as :scrapes
 
   # Skipped when the asset no longer exists (deleted between enqueue and run).
   discard_on ActiveJob::DeserializationError

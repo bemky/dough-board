@@ -50,7 +50,7 @@ class ConnectionJob < ApplicationJob
 
     cash = connector.cash(connection, account)
 
-    asset_ids = rows.map do |row|
+    asset_ids = combine(rows).map do |row|
       position = Position.find_or_initialize_by(
         account_id: account.id, asset_id: asset_for(row).id, as_of: as_of
       )
@@ -68,6 +68,32 @@ class ConnectionJob < ApplicationJob
     Position.where(account_id: account.id, as_of: as_of).where.not(asset_id: asset_ids).delete_all
 
     account.update!(positions_as_of: as_of)
+  end
+
+  # One holding can arrive as several rows: Coinbase reports a position per
+  # wallet, so an account holding coins in a vault and in its default wallet
+  # sends two BTC rows. A Position is unique on (account, asset, as_of), so
+  # writing them one by one silently kept only the last — the vault's balance
+  # disappeared. Fold them into one holding instead, weighting the average
+  # price by units so the cost basis still describes the whole thing.
+  def combine(rows)
+    rows.group_by { |row| row[:symbol] }.map do |_symbol, group|
+      next group.first if group.one?
+
+      units = group.sum { |row| row[:units].to_d }
+      # Only the rows that reported a cost can weight it, so they carry their
+      # own denominator.
+      priced = group.select { |row| row[:average_price] }
+      priced_units = priced.sum { |row| row[:units].to_d }
+      average_price =
+        if priced_units.nonzero?
+          priced.sum { |row| row[:units].to_d * row[:average_price].to_d } / priced_units
+        end
+
+      group.max_by { |row| row[:units].to_d }.merge(
+        units: units, average_price: average_price
+      )
+    end
   end
 
   # Uninvested cash rides along as a position against a cash asset, so it shows
