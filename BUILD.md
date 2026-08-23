@@ -128,7 +128,17 @@ dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dough-board-worker@*.se
 dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dough-board-worker@*.service
 dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dough-board-worker@*.service
 dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl status dough-board-worker@*.service
+dough-board ALL=(ALL) NOPASSWD: /usr/bin/systemctl reset-failed dough-board-worker@*.service
 ```
+
+`reset-failed` is easy to leave out — it isn't one of the obvious verbs — and
+leaving it out is quiet. `worker:restart` runs it before every restart because
+a unit that trips systemd's start-rate limit stays `failed` and **ignores
+`restart`** until it's cleared. The call ends in `|| true` so it can't abort a
+deploy, which means without the rule you get a sudo password lecture in the
+deploy log, the deploy reports success, and the safety net silently does
+nothing — until the day a worker is rate-limited and stays dead through a
+deploy that looked fine.
 
 - [ ] Add rules to `/etc/sudoers` (or a file under `/etc/sudoers.d/`).
 - [ ] **If using `/etc/sudoers.d/`**, confirm `/etc/sudoers` actually contains
