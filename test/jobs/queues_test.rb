@@ -14,11 +14,12 @@ class QueuesTest < ActiveSupport::TestCase
   test "the slow scrapes are not on the same queue as everything else" do
     assert_equal "scrapes", LoadSplitsJob.new.queue_name
     assert_equal "default", DerivePositionsJob.new.queue_name
+    assert_equal "default", AmortizeLoanJob.new.queue_name
     assert_equal "default", ConnectionJob.new.queue_name
   end
 
   test "every queue a job uses is one the workers are told to watch" do
-    used = [LoadSplitsJob, DerivePositionsJob, ConnectionJob].map { |job| job.new.queue_name }
+    used = [LoadSplitsJob, DerivePositionsJob, AmortizeLoanJob, ConnectionJob].map { |job| job.new.queue_name }
     assert_empty used.uniq - configured_names
   end
 

@@ -3,6 +3,15 @@
 <%= form_for account do |f| %>
     <%= hidden_field_tag "redirect_to", "/" %>
     <div class="space-y-4">
+        <% if account.errors.any? %>
+            <div class="rounded-xl border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
+                <ul class="list-inside list-disc">
+                    <% account.errors.full_messages.each do |message| %>
+                        <li><%= message %></li>
+                    <% end %>
+                </ul>
+            </div>
+        <% end %>
         <div>
             <%= f.label :name, class: label_classes %>
             <%= f.text_field :name, class: field_classes %>
@@ -35,12 +44,57 @@
                     Managed by the <%= account.connection&.label %> connection.
                 </p>
             <% else %>
-                <%= f.select :positions_source, Account::SELECTABLE_POSITIONS_SOURCES.map { |value, label| [label, value] }, {}, class: field_classes %>
+                <%= f.select :positions_source, Account::SELECTABLE_POSITIONS_SOURCES.map { |value, label| [label, value] }, {},
+                    class: field_classes, data: {positions_source_select: true} %>
                 <p class="hint">
                     Derived holdings are recomputed from this account's transactions on every run;
-                    hand-maintained ones are never rewritten.
+                    hand-maintained ones are never rewritten. A loan's balance is worked out from
+                    its terms, so there is nothing to keep up to date.
                 </p>
             <% end %>
+        </div>
+
+        <%# Only read when the source above is "amortized". Hidden and disabled
+            otherwise by the same JS, so switching an account away from a loan
+            leaves its terms on file rather than blanking them. %>
+        <% terms = account.loan_terms || {} %>
+        <div data-loan-terms class="space-y-4 rounded-xl border border-line bg-surface px-4 py-3">
+            <p class="text-sm font-semibold">Loan terms</p>
+            <div>
+                <%= label_tag "account_loan_terms_debt_symbol", "Kind of debt", class: label_classes %>
+                <%= select_tag "account[loan_terms][debt_symbol]",
+                    options_for_select(Asset::DEBT_NAMES.map { |symbol, name| [name, symbol] },
+                                       terms["debt_symbol"] || Account::DEFAULT_DEBT_SYMBOL),
+                    id: "account_loan_terms_debt_symbol", class: field_classes %>
+                <p class="hint">
+                    Every loan of the same kind folds into one line in the portfolio, whether
+                    it's kept here or synced from the lender.
+                </p>
+            </div>
+            <div>
+                <%= label_tag "account_loan_terms_principal", "Loan amount", class: label_classes %>
+                <%= number_field_tag "account[loan_terms][principal]", terms["principal"],
+                    step: "0.01", id: "account_loan_terms_principal", class: field_classes %>
+                <p class="hint">What was borrowed, not what's left.</p>
+            </div>
+            <div>
+                <%= label_tag "account_loan_terms_annual_rate", "Interest rate (%)", class: label_classes %>
+                <%= number_field_tag "account[loan_terms][annual_rate]", terms["annual_rate"],
+                    step: "0.001", id: "account_loan_terms_annual_rate", class: field_classes %>
+                <p class="hint">The annual rate, as you'd say it: 6.25.</p>
+            </div>
+            <div>
+                <%= label_tag "account_loan_terms_term_months", "Term (months)", class: label_classes %>
+                <%= number_field_tag "account[loan_terms][term_months]", terms["term_months"],
+                    step: "1", id: "account_loan_terms_term_months", class: field_classes %>
+                <p class="hint">360 for a 30-year mortgage.</p>
+            </div>
+            <div>
+                <%= label_tag "account_loan_terms_started_on", "Start date", class: label_classes %>
+                <%= date_field_tag "account[loan_terms][started_on]", terms["started_on"],
+                    id: "account_loan_terms_started_on", class: field_classes %>
+                <p class="hint">The first payment falls a month after this.</p>
+            </div>
         </div>
         <button type="submit" class="btn btn-primary w-full md:w-auto">
             <%= account.persisted? ? "Update Account" : "Create Account" %>

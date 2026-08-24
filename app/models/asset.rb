@@ -16,6 +16,20 @@ class Asset < ApplicationRecord
   normalizes :type, with: -> value { value.presence }
 
   validates :type, inclusion: {in: %w(stock fund crypto cash liability), allow_nil: true}
+
+  # The kinds of debt, and what each one is called the first time it's created.
+  # A debt asset is the *kind* rather than the account, so every card across
+  # every institution folds into one holding — which means this vocabulary has
+  # to be shared: a mortgage kept by hand and one synced from Plaid are the same
+  # holding or they are two, and two would be wrong.
+  DEBT_NAMES = {
+    "DEBT:CREDIT_CARD" => "Credit Card Debt",
+    "DEBT:LINE_OF_CREDIT" => "Line of Credit",
+    "DEBT:AUTO_LOAN" => "Auto Loan",
+    "DEBT:HOME_LOAN" => "Home Loan",
+    "DEBT:STUDENT_LOAN" => "Student Loan",
+    "DEBT:LOAN" => "Loan"
+  }.freeze
   validates :symbol, uniqueness: true
 
   # Both symbol and type feed #quote_symbol — type decides whether the request

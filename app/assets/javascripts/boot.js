@@ -122,6 +122,28 @@ function initNavigateSelects() {
   })
 }
 
+// The account form's loan terms only mean anything when the account's holdings
+// are calculated from them. Show the block when "amortized" is selected and
+// disable its inputs otherwise — a disabled input isn't submitted, so switching
+// an account away from a loan leaves the terms on file rather than clearing
+// them. With JS off the block is simply always visible.
+function initLoanTerms() {
+  const select = document.querySelector('[data-positions-source-select]')
+  const terms = document.querySelector('[data-loan-terms]')
+  if (!select || !terms) return
+
+  const apply = () => {
+    const shown = select.value === 'amortized'
+    terms.hidden = !shown
+    terms
+      .querySelectorAll('input, select, textarea')
+      .forEach((el) => (el.disabled = !shown))
+  }
+
+  select.addEventListener('change', apply)
+  apply()
+}
+
 // Portfolio/transactions pages render with cached-only prices (so they never
 // block on Finnhub). Each distinct `[data-quote-symbol]` on the page gets a
 // fetch to /assets/:symbol/quote; the server paces the underlying Finnhub
@@ -263,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDropzone()
   initAutoSubmit()
   initNavigateSelects()
+  initLoanTerms()
   initQuoteRefresh()
   initPlaidLink()
 })
