@@ -122,9 +122,31 @@ function initNavigateSelects() {
   })
 }
 
+// The account form's loan terms only mean anything when the account's holdings
+// are calculated from them. Show the block when "amortized" is selected and
+// disable its inputs otherwise — a disabled input isn't submitted, so switching
+// an account away from a loan leaves the terms on file rather than clearing
+// them. With JS off the block is simply always visible.
+function initLoanTerms() {
+  const select = document.querySelector('[data-positions-source-select]')
+  const terms = document.querySelector('[data-loan-terms]')
+  if (!select || !terms) return
+
+  const apply = () => {
+    const shown = select.value === 'amortized'
+    terms.hidden = !shown
+    terms
+      .querySelectorAll('input, select, textarea')
+      .forEach((el) => (el.disabled = !shown))
+  }
+
+  select.addEventListener('change', apply)
+  apply()
+}
+
 // The asset form carries one fieldset per valuation source (a car's purchase
-// price and date). Show the selected source's fields and disable
-// the rest, so only the settings that belong to it are submitted — a disabled
+// price and date). Show the selected source's fields and disable the rest, so
+// only the settings that belong to it are submitted — a disabled
 // input isn't. With JS off every fieldset posts, which is harmless: the extra
 // keys just sit unread on valuation_key.
 //
@@ -299,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDropzone()
   initAutoSubmit()
   initNavigateSelects()
+  initLoanTerms()
   initValuatorFields()
   initQuoteRefresh()
   initPlaidLink()

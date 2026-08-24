@@ -125,16 +125,6 @@ module Connectors
 
     DEBTS_BY_TYPE = {"credit" => "DEBT:CREDIT_CARD", "loan" => "DEBT:LOAN"}.freeze
 
-    # What each debt asset is called the first time it's created.
-    DEBT_NAMES = {
-      "DEBT:CREDIT_CARD" => "Credit Card Debt",
-      "DEBT:LINE_OF_CREDIT" => "Line of Credit",
-      "DEBT:AUTO_LOAN" => "Auto Loan",
-      "DEBT:HOME_LOAN" => "Home Loan",
-      "DEBT:STUDENT_LOAN" => "Student Loan",
-      "DEBT:LOAN" => "Loan"
-    }.freeze
-
     # Reading an Item's credit and loan accounts needs the liabilities product;
     # investments alone gets the brokerage side and, at institutions that filter
     # account selection by product, nothing else.
@@ -473,7 +463,7 @@ module Connectors
       symbol = debt_symbol(plaid_account)
       [{
         symbol: symbol,
-        name: DEBT_NAMES[symbol],
+        name: Asset::DEBT_NAMES[symbol],
         type: "liability",
         units: -balance,
         price: 1.0,
