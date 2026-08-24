@@ -15,7 +15,7 @@ class Asset < ApplicationRecord
   # whose type was never touched fails validation on it.
   normalizes :type, with: -> value { value.presence }
 
-  validates :type, inclusion: {in: %w(stock fund crypto cash liability), allow_nil: true}
+  validates :type, inclusion: {in: %w(stock fund crypto cash liability real_estate vehicle), allow_nil: true}
 
   # The kinds of debt, and what each one is called the first time it's created.
   # A debt asset is the *kind* rather than the account, so every card across
@@ -30,17 +30,39 @@ class Asset < ApplicationRecord
     "DEBT:STUDENT_LOAN" => "Student Loan",
     "DEBT:LOAN" => "Loan"
   }.freeze
+
   validates :symbol, uniqueness: true
+
+  # Which valuator prices a type when the asset doesn't name one itself. A house
+  # and a car aren't quoted by anybody, so they resolve away from Finnhub by
+  # default; everything else keeps going there. See app/lib/valuators.
+  VALUATORS_BY_TYPE = {
+    "real_estate" => "manual",
+    "vehicle" => "depreciation"
+  }.freeze
+
+  DEFAULT_VALUATOR = "finnhub".freeze
+
+  # A value typed into the asset form. Recorded as a quote, which is how every
+  # other price gets here too — so an override ages, sorts and renders like
+  # anything else rather than being a second kind of price.
+  attr_accessor :entered_value
 
   # Both symbol and type feed #quote_symbol — type decides whether the request
   # goes out as "BTC" or "BINANCE:BTCUSDT" — so changing either means the cached
-  # quotes priced a different instrument. Drop them; the next #current_quote
-  # refetches.
-  after_update :clear_quotes, if: -> { saved_change_to_symbol? || saved_change_to_type? }
+  # quotes priced a different instrument. The valuation settings are the same
+  # thing one step out: a different purchase price is a different curve. Drop
+  # them; the next #current_quote refetches.
+  after_update :clear_quotes, if: -> {
+    saved_change_to_symbol? || saved_change_to_type? ||
+      saved_change_to_valuation_source? || saved_change_to_valuation_key?
+  }
 
   # Splits are scraped by symbol, so a new symbol invalidates them — and with
   # them every transaction's cached adjusted_quantity.
-  after_update :reset_splits, if: -> { saved_change_to_symbol? }
+  after_update :reset_splits, if: -> { saved_change_to_symbol? && splittable? }
+
+  after_save :record_entered_value, if: -> { entered_value.present? }
 
 
   # A cash balance is carried as a position against a cash asset so it shows up
@@ -63,6 +85,25 @@ class Asset < ApplicationRecord
     cash? || liability?
   end
 
+  # A house and a car are held the same way a share is — one position, some
+  # number of units, a price each — so nothing downstream has to know what they
+  # are. What differs is only where the price comes from, and that's the
+  # valuator's business rather than a branch here.
+  #
+  # Only a security splits, though: a house has no split history to scrape, and
+  # splithistory.com would happily be asked for "PROPERTY:12-OAK-ST".
+  def splittable?
+    !face_value? && !VALUATORS_BY_TYPE.key?(type.to_s)
+  end
+
+  def valuator_name
+    valuation_source.presence || VALUATORS_BY_TYPE[type.to_s] || DEFAULT_VALUATOR
+  end
+
+  def valuator
+    Valuators.for(valuator_name)
+  end
+
   def price
     return 1.0 if face_value?
     current_quote&.price
@@ -78,12 +119,29 @@ class Asset < ApplicationRecord
     cached_quote || Quote.create(asset: self)
   end
 
-  # A <24h-old quote already on hand, or nil — never hits Finnhub. Pages that
-  # render many assets at once (the portfolio index) use this instead of
-  # `current_quote`/`price` so rendering never blocks on the Finnhub API; the
-  # page's JS fills in fresh prices afterward via AssetsController#quote.
+  # A quote already on hand and still current, or nil — never hits the network.
+  # Pages that render many assets at once (the portfolio index) use this instead
+  # of `current_quote`/`price` so rendering never blocks; the page's JS fills in
+  # fresh prices afterward via AssetsController#quote.
+  #
+  # How long "current" is belongs to the valuator: Finnhub's 24 hours is a cache
+  # of something that moves by the minute, while a scraped house price never
+  # expires — letting it would blank the holding out rather than improve it.
   def cached_quote
-    quotes.filter(quoted_at: {gt: 24.hours.ago}).order(quoted_at: :desc).first
+    ttl = valuator.quote_ttl
+    scope = ttl ? quotes.where(quoted_at: ttl.ago..) : quotes
+    scope.order(quoted_at: :desc).first
+  end
+
+  # Whether the periodic refresh should ask this asset's source again. Distinct
+  # from #cached_quote's window: a stock is re-quoted every half hour but its
+  # last quote stays usable for a day, and a house is the other way round.
+  def quote_due?
+    interval = valuator.refresh_interval
+    return false if interval.nil?
+
+    latest = quotes.order(quoted_at: :desc).first
+    latest.nil? || latest.quoted_at <= interval.ago
   end
 
   def cached_price
@@ -92,6 +150,7 @@ class Asset < ApplicationRecord
   end
   
   def load_splits(force=false)
+    return splits unless splittable?
     return splits if !force && splits_updated_at && splits_updated_at > 24.hours.ago
     splits = SplitHistoryScraper.splits(symbol).map do |data|
       self.splits.find{|split| split.split_at == data[0]} || Split.create(asset: self, split_at: data[0], ratio: data[1])
@@ -105,7 +164,18 @@ class Asset < ApplicationRecord
   end
 
   private def clear_quotes
+    # Reset first: a quote made through `Quote.create(asset: self)` is not
+    # appended to an already-loaded association, so destroy_all would leave
+    # exactly the quote most likely to be the stale one behind.
+    quotes.reset
     quotes.destroy_all
+  end
+
+  # after_update runs before after_save, so a save that both changes the source
+  # and enters a value clears the old quotes first and keeps this one.
+  private def record_entered_value
+    Quote.create(asset: self, price: entered_value.to_f, quoted_at: Time.current)
+    self.entered_value = nil
   end
 
   # Dropping the splits alone isn't enough: adjusted_quantity is computed once

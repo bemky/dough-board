@@ -36,6 +36,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.string "symbol", null: false
     t.string "type"
     t.datetime "updated_at", null: false
+    t.json "valuation_key"
+    t.string "valuation_source"
     t.index ["exchange_id"], name: "index_assets_on_exchange_id"
     t.index ["symbol"], name: "index_assets_on_symbol", unique: true
   end

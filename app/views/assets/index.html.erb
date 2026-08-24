@@ -2,7 +2,12 @@
     <%= render partial: 'transactions/portfolio', locals: {portfolio: @portfolio} %>
 
     <section class="space-y-2">
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Holdings</h2>
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Holdings</h2>
+            <%# A house or a car is the one kind of asset nothing else creates: it has
+                no ticker to arrive by and no institution to sync it. %>
+            <%= link_to "+ Add asset", new_asset_path, class: "btn btn-secondary btn-sm" %>
+        </div>
         <%= render partial: 'assets/table', locals: {portfolio: @portfolio} %>
     </section>
 </div>
