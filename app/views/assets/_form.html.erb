@@ -1,6 +1,9 @@
 <% field_classes = "field" %>
 <% label_classes = "label" %>
-<%= form_for asset do |f| %>
+<%= form_for asset, url: (asset.persisted? ? asset_path(asset) : create_asset_path) do |f| %>
+    <%# Without this, standardapi's create redirects to #show, which assets have
+        no route for. %>
+    <%= hidden_field_tag "redirect_to", assets_path %>
     <div class="space-y-4">
         <% if asset.errors.any? %>
             <div class="rounded-xl border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
@@ -14,6 +17,11 @@
         <div>
             <%= f.label :symbol, class: label_classes %>
             <%= f.text_field :symbol, class: field_classes %>
+            <p class="hint">
+                A ticker, or — for something that has none — a name of your own,
+                namespaced so it can't collide with one: <code>PROPERTY:12-OAK-ST</code>,
+                <code>VEHICLE:2019-OUTBACK</code>.
+            </p>
         </div>
         <div>
             <%= f.label :name, class: label_classes %>
@@ -24,12 +32,69 @@
             <%# "cash" is left out: the dollar asset is made and maintained by
                 the sync. "liability" is offered, so a loan at a lender no
                 connection reaches can still be kept by hand. %>
-            <%= f.select :type, %w(stock fund crypto liability), {include_blank: true}, class: field_classes %>
+            <%= f.select :type,
+                [["Stock", "stock"], ["Fund", "fund"], ["Crypto", "crypto"],
+                 ["Liability", "liability"], ["Real estate", "real_estate"],
+                 ["Vehicle", "vehicle"]],
+                {include_blank: true},
+                class: field_classes, data: {valuator_type_select: true} %>
             <p class="hint">
                 Crypto is quoted as BINANCE:&lt;SYMBOL&gt;USDT. A liability is worth a dollar a
-                unit and is held in negative units — what's owed.
+                unit and is held in negative units — what's owed. Real estate and a vehicle
+                are one unit each, worth whatever the source below says.
             </p>
         </div>
+        <div>
+            <%= f.label :valuation_source, "Value from", class: label_classes %>
+            <%= f.select :valuation_source, Valuators.selectable,
+                {include_blank: "Automatic (from type)"},
+                class: field_classes,
+                data: {
+                  valuator_select: true,
+                  valuator_defaults: Asset::VALUATORS_BY_TYPE.to_json,
+                  valuator_fallback: Asset::DEFAULT_VALUATOR
+                } %>
+            <p class="hint">
+                Left automatic, a vehicle is depreciated from what you paid, real estate
+                is whatever you last recorded below, and everything else is quoted by
+                Finnhub.
+            </p>
+        </div>
+
+        <%# One fieldset per source, only the selected one shown. The hidden ones
+            are disabled by the same JS so a house's listing URL isn't submitted
+            alongside a car's depreciation settings. %>
+        <% Valuators.names.each do |name| %>
+            <% keys = Valuators.for(name).keys %>
+            <% next if keys.empty? %>
+            <div data-valuator-fields="<%= name %>" class="space-y-4 rounded-xl border border-line bg-surface px-4 py-3">
+                <% keys.each do |key| %>
+                    <div>
+                        <%= label_tag "asset_valuation_key_#{key[:name]}", key[:label], class: label_classes %>
+                        <%= text_field_tag "asset[valuation_key][#{key[:name]}]",
+                            asset.valuation_key&.dig(key[:name].to_s),
+                            id: "asset_valuation_key_#{key[:name]}",
+                            type: key[:type], class: field_classes %>
+                        <% if key[:hint] %>
+                            <p class="hint"><%= key[:hint] %></p>
+                        <% end %>
+                    </div>
+                <% end %>
+            </div>
+        <% end %>
+
+        <div>
+            <%= f.label :entered_value, "Record a value", class: label_classes %>
+            <%= f.number_field :entered_value, step: "0.01", value: nil, class: field_classes %>
+            <p class="hint">
+                Saves as today's price for one unit, whatever the source above says.
+                <% if (quote = asset.cached_quote) %>
+                    Currently <%= number_to_currency(quote.price) %>, from
+                    <%= time_ago_in_words(quote.quoted_at) %> ago.
+                <% end %>
+            </p>
+        </div>
+
         <div>
             <%= f.label :exchange, class: label_classes %>
             <%= f.collection_select :exchange_id, Exchange.order(:code), :id, :label, {include_blank: true}, class: field_classes %>

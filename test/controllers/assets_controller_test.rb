@@ -52,6 +52,62 @@ class AssetsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @asset.exchange
   end
 
+  # A house has no ticker and no transactions, so nothing else would ever
+  # create it.
+  test "new renders a blank form" do
+    get new_asset_path
+    assert_response :success
+    assert_select "select[name=?]", "asset[valuation_source]"
+    # One fieldset per source, which the JS shows and hides by this attribute.
+    assert_select "[data-valuator-fields=?]", "depreciation"
+    assert_select "input[name=?]", "asset[valuation_key][purchase_price]"
+    assert_select "input[name=?]", "asset[valuation_key][purchased_on]"
+  end
+
+  test "create adds an asset with the value entered for it" do
+    post create_asset_path, params: {asset: {
+      symbol: "PROPERTY:12-OAK-ST", name: "Home", type: "real_estate",
+      entered_value: "742500"
+    }, redirect_to: assets_path}
+    assert_redirected_to assets_path
+
+    house = Asset.find_by(symbol: "PROPERTY:12-OAK-ST")
+    assert_equal "real_estate", house.type
+    assert_equal Valuators::Manual, house.valuator
+    assert_in_delta 742_500, house.cached_price, 0.01
+  end
+
+  test "create adds an asset with its valuation settings" do
+    post create_asset_path, params: {asset: {
+      symbol: "VEHICLE:2019-OUTBACK", name: "Outback", type: "vehicle",
+      valuation_key: {purchase_price: "30000", purchased_on: Date.current.to_s}
+    }, redirect_to: assets_path}
+    assert_redirected_to assets_path
+
+    car = Asset.find_by(symbol: "VEHICLE:2019-OUTBACK")
+    assert_equal Valuators::Depreciation, car.valuator
+    assert_equal "30000", car.valuation_key["purchase_price"]
+    assert_in_delta 30_000, car.price, 0.01
+  end
+
+  # valuation_key is a json column: permitting it wholesale would let a form
+  # post write arbitrary JSON onto an asset.
+  test "create keeps keys no valuator declared out of valuation_key" do
+    post create_asset_path, params: {asset: {
+      symbol: "VEHICLE:2019-OUTBACK", type: "vehicle",
+      valuation_key: {purchase_price: "30000", purchased_on: "2019-06-01", whatever: "no"}
+    }, redirect_to: assets_path}
+
+    car = Asset.find_by(symbol: "VEHICLE:2019-OUTBACK")
+    assert_equal %w(purchase_price purchased_on), car.valuation_key.keys.sort
+  end
+
+  test "update records a hand-entered value as a quote" do
+    patch asset_path(@asset), params: {asset: {entered_value: "123.45"}}
+    assert_redirected_to assets_path
+    assert_in_delta 123.45, @asset.reload.cached_price, 0.001
+  end
+
   test "update re-renders edit with the errors when the record is invalid" do
     patch asset_path(@asset), params: {asset: {type: "bond"}}
     assert_response :bad_request

@@ -6,12 +6,16 @@ class Quote < ApplicationRecord
 
   def fetch(force=false)
     return if price && !force
-    # Dollars held or owed are worth their face value — Finnhub has nothing to
-    # say about either.
+    # Dollars held or owed are worth their face value — no source has anything
+    # to say about either.
     throw :abort if asset.face_value?
-    price = Finnhub.quote(asset.quote_symbol)
-    # Abort the callback chain (so a blank Quote is never persisted) when
-    # Finnhub returns nothing — e.g. an unknown symbol or a rate-limited request.
+    # Which source answers is the asset's business (see app/lib/valuators): a
+    # security goes to Finnhub, a house to its listing page, a car to a
+    # depreciation curve.
+    price = asset.valuator.price(asset)
+    # Abort the callback chain (so a blank Quote is never persisted) when the
+    # source returns nothing — an unknown symbol, a rate-limited request, a
+    # listing that no longer parses.
     throw :abort if price.nil?
     self.price = price
     self.quoted_at = Time.now

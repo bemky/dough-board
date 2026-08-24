@@ -120,4 +120,15 @@ class PositionTest < ActiveSupport::TestCase
     assert_empty Position.where(as_of: @as_of).portfolio
   end
 
+  # A house is one unit of something that has a price, which is the whole reason
+  # nothing in the portfolio needed changing to hold one.
+  test "a house is a holding like any other" do
+    house = Asset.create!(symbol: "PROPERTY:12-OAK-ST", type: "real_estate")
+    Quote.create!(asset: house, price: 742_500, quoted_at: 3.weeks.ago)
+    build_position(asset: house, units: 1)
+
+    holding = Position.where(as_of: @as_of).portfolio.first
+    assert_in_delta 742_500, holding[:value], 0.01
+  end
+
 end
