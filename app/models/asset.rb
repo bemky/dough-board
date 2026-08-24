@@ -15,7 +15,7 @@ class Asset < ApplicationRecord
   # whose type was never touched fails validation on it.
   normalizes :type, with: -> value { value.presence }
 
-  validates :type, inclusion: {in: %w(stock fund crypto cash liability real_estate vehicle), allow_nil: true}
+  validates :type, inclusion: {in: %w(stock fund crypto cash liability balance real_estate vehicle), allow_nil: true}
   validates :symbol, uniqueness: true
 
   # Which valuator prices a type when the asset doesn't name one itself. A house
@@ -65,9 +65,19 @@ class Asset < ApplicationRecord
     type == "liability"
   end
 
+  # An account some institution reports only the value of: no holdings, no
+  # activity, just what it's worth (Titan, cleared by Apex, is the one that
+  # forced this). It's carried like cash and like a debt — dollars at a dollar
+  # apiece, the count being the balance — except the asset stands in for one
+  # account rather than for a kind of thing, because two managed accounts are
+  # two different things being valued rather than one holding held twice.
+  def balance?
+    type == "balance"
+  end
+
   # Dollars, held or owed, are worth a dollar. Nothing here is quotable.
   def face_value?
-    cash? || liability?
+    cash? || liability? || balance?
   end
 
   # A house and a car are held the same way a share is — one position, some

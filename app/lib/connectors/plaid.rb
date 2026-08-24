@@ -95,9 +95,13 @@ module Connectors
     # #positions and #transactions take a different path for them.
     DEBT_ACCOUNT_TYPES = %w[credit loan].freeze
 
+    # The account types that hold instruments, and whose balance is therefore a
+    # last resort rather than the answer — see #balance_positions.
+    BROKERAGE_ACCOUNT_TYPES = %w[investment brokerage].freeze
+
     # Plaid reports every account behind an Item, and Dough Board wants all of
     # them: assets and debts together are what a net worth is.
-    SYNCED_ACCOUNT_TYPES = (%w[investment brokerage depository] + DEBT_ACCOUNT_TYPES).freeze
+    SYNCED_ACCOUNT_TYPES = (BROKERAGE_ACCOUNT_TYPES + %w[depository] + DEBT_ACCOUNT_TYPES).freeze
 
     # account.subtype -> the asset a debt is carried against. Debts are folded
     # by kind rather than by account, so two cards at two banks add up to one
@@ -177,20 +181,18 @@ module Connectors
     # it's carried as a negative number of dollars against the asset standing in
     # for that kind of debt. Everything downstream — the snapshot, the account
     # total, the portfolio — then adds it up without knowing it's a liability.
+    #
+    # A brokerage that reports no holdings falls back to the same shape in the
+    # other direction: some of them tell Plaid only what an account is worth.
     def positions(connection, account)
       plaid_account = plaid_account(connection, account)
       return debt_positions(plaid_account) if DEBT_ACCOUNT_TYPES.include?(plaid_account&.type)
 
       response = holdings_get(connection, account)
-      return [] unless response
+      rows = holding_positions(response)
+      return rows if rows.any?
 
-      securities = Array(response.securities).index_by(&:security_id)
-
-      Array(response.holdings).filter_map do |holding|
-        security = securities[holding.security_id]
-        next unless security
-        position_attributes(holding, security)
-      end
+      balance_positions(connection, plaid_account)
     end
 
     # Plaid pages with count/offset and caps a page at 500, and reports the whole
@@ -228,6 +230,13 @@ module Connectors
       end
 
       collected
+    rescue ConnectionError => e
+      # An institution that reports a balance and nothing else refuses this
+      # endpoint the same way it refuses holdings. That's an account with no
+      # activity to browse, not a failed sync — and raising here would strand
+      # the whole connection over it.
+      raise unless NO_HOLDINGS_ERRORS.include?(e.code)
+      []
     end
 
     # Plaid has no endpoint that lists a client_id's Items, so there is nothing
@@ -366,6 +375,10 @@ module Connectors
     # isn't a number it can add up.
     CURRENCY = "USD"
 
+    # The namespace for the asset standing in for a brokerage account that
+    # reports only what it's worth. See #balance_positions.
+    BALANCE_PREFIX = "FUND:"
+
     # Shown to the account holder inside Plaid Link.
     CLIENT_NAME = "Dough Board"
 
@@ -375,9 +388,9 @@ module Connectors
     # anything else identifying.)
     CLIENT_USER_ID = "dough-board"
 
-    # Asking for holdings at an institution that has no brokerage behind it
-    # isn't a failure worth recording on the connection — the answer is simply
-    # that there are none.
+    # Asking for holdings, or for investments activity, at an institution that
+    # doesn't answer for them isn't a failure worth recording on the connection —
+    # the answer is simply that there are none.
     NO_HOLDINGS_ERRORS = %w[PRODUCTS_NOT_SUPPORTED NO_INVESTMENT_ACCOUNTS].freeze
 
     # How long one /accounts/get answer stands in for the next. It answers for
@@ -466,6 +479,75 @@ module Connectors
         price: 1.0,
         currency: CURRENCY
       }]
+    end
+
+    def holding_positions(response)
+      return [] unless response
+      securities = Array(response.securities).index_by(&:security_id)
+
+      Array(response.holdings).filter_map do |holding|
+        security = securities[holding.security_id]
+        next unless security
+        position_attributes(holding, security)
+      end
+    end
+
+    # Some brokerages behind Plaid report what an account is *worth* and nothing
+    # else. Titan, cleared by Apex, is one: /investments/holdings comes back with
+    # no holdings for its accounts and there is no investments activity either,
+    # so the balance on /accounts/get is the whole of what Plaid knows. Left
+    # alone the account syncs as empty and the portfolio quietly loses all of it.
+    #
+    # So the balance is carried exactly the way a debt is, in the other
+    # direction: one position of dollars at $1.00 apiece against an asset
+    # standing in for the account. Everything downstream — the snapshot, the
+    # account total, the treemap, the value history — then works on it unchanged,
+    # and the day the institution does report holdings they simply win (see
+    # #positions) and this row is pruned like any holding that went away.
+    #
+    # Two deliberate choices. It is *not* the USD cash asset: the money is
+    # invested rather than uninvested, and folding it into cash would overstate
+    # what's liquid across the whole portfolio. And unlike a debt — where every
+    # card is one "credit card" line — the asset is per account, because two
+    # managed accounts are two different things being valued, not one holding
+    # held twice.
+    def balance_positions(connection, plaid_account)
+      return [] unless BROKERAGE_ACCOUNT_TYPES.include?(plaid_account&.type)
+
+      balance = plaid_account.balances&.current
+      return [] if balance.nil? || balance.zero? || !dollars?(plaid_account)
+
+      [{
+        symbol: balance_symbol(connection, plaid_account),
+        name: balance_name(connection, plaid_account),
+        type: "balance",
+        units: balance,
+        price: 1.0,
+        currency: CURRENCY
+      }]
+    end
+
+    # Namespaced for the same reason Plaid's debts are: "FUND" reads as what the
+    # holding is, and the colon keeps it off the ticker tape — nothing will ever
+    # quote it, and Asset#face_value? means nothing tries. The institution is
+    # part of it because an account named "Individual" is named that at every
+    # brokerage there is, and two of them are not one holding.
+    def balance_symbol(connection, plaid_account)
+      slug = [institution_name(connection), account_name(plaid_account)].compact_blank.join("-")
+      "#{BALANCE_PREFIX}#{slug.presence&.parameterize&.upcase || plaid_account.account_id}"
+    end
+
+    def balance_name(connection, plaid_account)
+      [institution_name(connection), account_name(plaid_account)].compact_blank.join(" ").presence ||
+        "Account balance"
+    end
+
+    def account_name(plaid_account)
+      plaid_account.name.presence || plaid_account.official_name.presence
+    end
+
+    def institution_name(connection)
+      accounts_get(connection).item&.institution_name
     end
 
     def debt_symbol(plaid_account)

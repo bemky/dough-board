@@ -72,6 +72,18 @@ class AssetTest < ActiveSupport::TestCase
     assert_empty debt.quotes.reload
   end
 
+  test "an account reported only as a balance is dollars held, and never quoted" do
+    balance = Asset.create!(symbol: "FUND:TITAN-FLAGSHIP", type: "balance",
+      splits_updated_at: Time.current)
+
+    assert balance.face_value?
+    assert_not balance.splittable?
+    assert_equal 1.0, balance.price
+    assert_equal 1.0, balance.cached_price
+    # Nothing quotes a FUND: symbol, and #price must not go asking.
+    assert_empty balance.quotes.reload
+  end
+
   test "a type resolves to the source that can price it" do
     assert_equal Valuators::Finnhub, @asset.valuator
     assert_equal Valuators::Finnhub, Asset.new(symbol: "BTC", type: "crypto").valuator

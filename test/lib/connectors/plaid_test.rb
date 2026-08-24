@@ -224,6 +224,11 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
   end
 
   test "positions leave out cash that isn't dollars" do
+    # ...and the account reports no balance either, so there's nothing for the
+    # balance-only fallback below to stand in with.
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: nil)
+    )
     @api.holdings_response = holdings_response(
       holdings: [holding(account_id: "acct-invest", security_id: "sec-eur",
         quantity: 500.0, price: 1.0, currency: "EUR")],
@@ -254,9 +259,96 @@ class Connectors::PlaidTest < ActiveSupport::TestCase
   end
 
   test "an institution with no brokerage behind it has no holdings, not an error" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: nil)
+    )
     @api.errors[:investments_holdings_get] = api_error("PRODUCTS_NOT_SUPPORTED", "products not supported")
 
     assert_empty Connectors::Plaid.positions(@connection, @account)
+  end
+
+  # --- balance-only accounts ------------------------------------------------
+
+  test "a brokerage that reports only what it's worth is carried as that balance" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", subtype: "brokerage",
+        name: "Flagship", current: 23631.98),
+      institution: "Titan"
+    )
+    # Titan, cleared by Apex, answers for holdings with none at all.
+    @api.holdings_response = holdings_response(holdings: [], securities: [])
+
+    position = Connectors::Plaid.positions(@connection, @account).sole
+
+    # Per account, not per kind, and not the USD cash asset: the money is
+    # invested, and two managed accounts are two different things being valued.
+    assert_equal "FUND:TITAN-FLAGSHIP", position[:symbol]
+    assert_equal "Titan Flagship", position[:name]
+    assert_equal "balance", position[:type]
+    assert_equal 23631.98, position[:units]
+    assert_equal 1.0, position[:price]
+  end
+
+  test "a balance stands in when the institution refuses holdings outright" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", name: "Flagship", current: 500.0),
+      institution: "Titan"
+    )
+    @api.errors[:investments_holdings_get] = api_error("PRODUCTS_NOT_SUPPORTED", "products not supported")
+
+    assert_equal 500.0, Connectors::Plaid.positions(@connection, @account).sole[:units]
+  end
+
+  test "holdings win over the balance, so nothing is counted twice" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: 23631.98), institution: "Titan"
+    )
+    @api.holdings_response = holdings_response(
+      holdings: [holding(account_id: "acct-invest", security_id: "sec-ewz", quantity: 5.0, price: 42.15)],
+      securities: [security(id: "sec-ewz", ticker: "EWZ", type: "etf")]
+    )
+
+    assert_equal ["EWZ"], Connectors::Plaid.positions(@connection, @account).map { |p| p[:symbol] }
+  end
+
+  test "a balance in another currency, or of nothing, is not a holding" do
+    @api.holdings_response = holdings_response(holdings: [], securities: [])
+
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: 900.0, currency: "GBP")
+    )
+    assert_empty Connectors::Plaid.positions(@connection, @account)
+
+    @connector.instance_variable_get(:@accounts).clear
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: 0.0)
+    )
+    assert_empty Connectors::Plaid.positions(@connection, @account)
+  end
+
+  test "a bank account's balance stays cash rather than becoming a fund of its own" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-bank", type: "depository", current: 12060.0)
+    )
+    bank = Account.create!(name: "Checking", connection: @connection,
+      foreign_id: "acct-bank", positions_source: "connection")
+    @api.holdings_response = holdings_response(holdings: [], securities: [])
+
+    # #cash already reports this one; a balance position too would double it.
+    assert_empty Connectors::Plaid.positions(@connection, bank)
+    assert_equal 12060.0, Connectors::Plaid.cash(@connection, bank)
+  end
+
+  test "an account that reports only a balance has no activity to ask about either" do
+    @api.accounts_response = accounts_response(
+      account(id: "acct-invest", type: "investment", current: 500.0)
+    )
+    @api.errors[:investments_transactions_get] =
+      api_error("PRODUCTS_NOT_SUPPORTED", "products not supported")
+
+    # Raising would strand the whole connection over an account with nothing to
+    # browse.
+    assert_empty Connectors::Plaid.transactions(@connection, @account)
   end
 
   # --- debts ----------------------------------------------------------------
