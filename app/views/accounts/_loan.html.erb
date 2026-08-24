@@ -1,0 +1,50 @@
+<%# The terms behind an amortized account's balance. Shown because the balance
+    is a calculation rather than a statement: without the inputs on the page,
+    a number nobody can check is a number nobody should trust. %>
+<section class="space-y-3 rounded-xl border border-line bg-surface px-4 py-4">
+    <div class="flex items-baseline justify-between gap-3">
+        <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Loan</h2>
+        <span class="text-xs text-muted"><%= Asset::DEBT_NAMES[account.debt_symbol] %></span>
+    </div>
+
+    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm md:grid-cols-4">
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Owed</dt>
+            <dd class="font-semibold text-loss"><%= number_to_currency(loan.balance) %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Monthly payment</dt>
+            <dd class="font-semibold"><%= number_to_currency(loan.monthly_payment) %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Rate</dt>
+            <dd><%= number_with_precision(loan.annual_rate, precision: 3, strip_insignificant_zeros: true) %>%</dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Borrowed</dt>
+            <dd><%= number_to_currency(loan.principal) %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Payments made</dt>
+            <dd><%= loan.payments_made %> of <%= loan.term_months %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Started</dt>
+            <dd><%= l loan.started_on, format: :long %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Paid off</dt>
+            <dd><%= l loan.payoff_on, format: :long %></dd>
+        </div>
+        <div>
+            <dt class="text-xs uppercase tracking-wide text-muted">Interest over term</dt>
+            <dd><%= number_to_currency(loan.total_interest) %></dd>
+        </div>
+    </dl>
+
+    <p class="hint">
+        Worked out from these terms, not read from the lender — an extra payment or an
+        escrow change won't show up here. Edit the terms, or switch this account to
+        hand-maintained holdings, if it drifts from the statement.
+    </p>
+</section>

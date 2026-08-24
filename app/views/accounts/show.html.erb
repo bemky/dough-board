@@ -5,6 +5,10 @@
 
     <%= render partial: 'transactions/portfolio', locals: {portfolio: portfolio} %>
 
+    <% if (loan = @account.amortization) %>
+        <%= render partial: 'accounts/loan', locals: {account: @account, loan: loan} %>
+    <% end %>
+
     <section class="space-y-2">
         <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Holdings</h2>
         <%= render partial: 'assets/table', locals: {

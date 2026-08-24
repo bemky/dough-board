@@ -1,12 +1,83 @@
 require "test_helper"
 
 class AccountTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
 
   test "accounts derive their positions from transactions by default" do
     account = Account.create!(institution_name: "Robinhood", name: "Brokerage")
     assert_equal "transactions", account.positions_source
     assert account.derives_positions?
     assert_not account.manual_positions?
+  end
+
+  TERMS = {
+    "principal" => "300000",
+    "annual_rate" => "6",
+    "term_months" => "360",
+    "started_on" => "2020-01-01"
+  }.freeze
+
+  test "an amortized account works its balance out from its terms" do
+    account = Account.create!(institution_name: "Rocket", name: "Mortgage",
+      positions_source: "amortized", loan_terms: TERMS)
+
+    assert account.amortized_positions?
+    assert_not account.derives_positions?, "the transactions fold must leave it alone"
+    assert_not account.manual_positions?, "its positions are not editable by hand"
+    assert_in_delta 1798.65, account.amortization.monthly_payment, 0.01
+  end
+
+  # Accepting them would leave an account reporting no balance at all, which
+  # reads as a mortgage that's been paid off.
+  test "an amortized account refuses terms that don't describe a loan" do
+    account = Account.new(institution_name: "Rocket", name: "Mortgage",
+      positions_source: "amortized", loan_terms: TERMS.merge("term_months" => "0"))
+
+    assert_not account.valid?
+    assert_not_empty account.errors[:loan_terms]
+  end
+
+  test "every other account ignores loan terms entirely" do
+    account = Account.new(institution_name: "Robinhood", name: "Brokerage",
+      loan_terms: {"principal" => "nonsense"})
+
+    assert account.valid?
+    assert_nil account.amortization
+  end
+
+  # The balance follows from the terms, so a change to them is a change to the
+  # holding — waiting for the hourly run would leave the account wrong.
+  test "changing the terms recomputes the balance now" do
+    account = Account.create!(institution_name: "Rocket", name: "Mortgage",
+      positions_source: "transactions")
+
+    assert_enqueued_with job: AmortizeLoanJob, args: [account] do
+      account.update!(positions_source: "amortized", loan_terms: TERMS)
+    end
+
+    assert_enqueued_with job: AmortizeLoanJob, args: [account] do
+      account.update!(loan_terms: TERMS.merge("principal" => "250000"))
+    end
+  end
+
+  # The job writes positions_as_of, which would otherwise queue another run of
+  # the job that just wrote it.
+  test "an unrelated save on an amortized account queues nothing" do
+    account = Account.create!(institution_name: "Rocket", name: "Mortgage",
+      positions_source: "amortized", loan_terms: TERMS)
+
+    assert_no_enqueued_jobs only: AmortizeLoanJob do
+      account.update!(positions_as_of: Time.current, name: "Home Loan")
+    end
+  end
+
+  test "a debt kind outside the vocabulary falls back rather than inventing an asset" do
+    account = Account.new(loan_terms: TERMS.merge("debt_symbol" => "DEBT:HOVERCRAFT"))
+    assert_equal "DEBT:HOME_LOAN", account.debt_symbol
+
+    account.loan_terms = TERMS.merge("debt_symbol" => "DEBT:STUDENT_LOAN")
+    assert_equal "DEBT:STUDENT_LOAN", account.debt_symbol
   end
 
   test "positions_source is constrained" do
