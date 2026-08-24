@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_23_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_23_140000) do
   create_table "accounts", force: :cascade do |t|
     t.integer "connection_id"
     t.datetime "created_at", null: false
@@ -35,6 +35,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_120000) do
     t.string "symbol", null: false
     t.string "type"
     t.datetime "updated_at", null: false
+    t.json "valuation_key"
+    t.string "valuation_source"
     t.index ["exchange_id"], name: "index_assets_on_exchange_id"
     t.index ["symbol"], name: "index_assets_on_symbol", unique: true
   end

@@ -122,6 +122,42 @@ function initNavigateSelects() {
   })
 }
 
+// The asset form carries one fieldset per valuation source (a car's purchase
+// price and date). Show the selected source's fields and disable
+// the rest, so only the settings that belong to it are submitted — a disabled
+// input isn't. With JS off every fieldset posts, which is harmless: the extra
+// keys just sit unread on valuation_key.
+//
+// "Automatic" resolves the same way Asset#valuator_name does, from the type
+// select; the mapping is handed over as JSON rather than duplicated here.
+function initValuatorFields() {
+  const select = document.querySelector('[data-valuator-select]')
+  if (!select) return
+
+  const typeSelect = document.querySelector('[data-valuator-type-select]')
+  const groups = document.querySelectorAll('[data-valuator-fields]')
+  const defaults = JSON.parse(select.dataset.valuatorDefaults || '{}')
+  const fallback = select.dataset.valuatorFallback
+
+  const resolved = () =>
+    select.value || defaults[typeSelect ? typeSelect.value : ''] || fallback
+
+  const apply = () => {
+    const active = resolved()
+    groups.forEach((group) => {
+      const shown = group.dataset.valuatorFields === active
+      group.hidden = !shown
+      group
+        .querySelectorAll('input, select, textarea')
+        .forEach((el) => (el.disabled = !shown))
+    })
+  }
+
+  select.addEventListener('change', apply)
+  if (typeSelect) typeSelect.addEventListener('change', apply)
+  apply()
+}
+
 // Portfolio/transactions pages render with cached-only prices (so they never
 // block on Finnhub). Each distinct `[data-quote-symbol]` on the page gets a
 // fetch to /assets/:symbol/quote; the server paces the underlying Finnhub
@@ -263,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDropzone()
   initAutoSubmit()
   initNavigateSelects()
+  initValuatorFields()
   initQuoteRefresh()
   initPlaidLink()
 })

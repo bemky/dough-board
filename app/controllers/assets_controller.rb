@@ -6,6 +6,12 @@ class AssetsController < ApplicationController
     @portfolio = Position.current.portfolio.sort_by{|h| -h[:value]}
   end
 
+  # Assets are normally created for you — by a transaction's symbol, or by a
+  # sync. A house or a car has neither, so it gets typed in here.
+  def new
+    @asset = Asset.new(type: params[:type])
+  end
+
   # standardapi provides update but no edit action, so define one that populates
   # the resource ivar for edit.html.erb's form (same shape as TransactionsController).
   def edit
