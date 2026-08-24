@@ -1,6 +1,13 @@
 <%# The terms behind an amortized account's balance. Shown because the balance
     is a calculation rather than a statement: without the inputs on the page,
     a number nobody can check is a number nobody should trust. %>
+<%# In demo mode the balance is a fraction of what's owed wherever it's a
+    holding, so the terms it was worked out from are shown at that same
+    fraction — a real mortgage beside a demo balance would give away both. The
+    rate, the dates and the number of payments are not quantities and stay as
+    they are, and because every dollar figure here takes the same factor, the
+    arithmetic between them still holds. %>
+<% dollars = ->(amount) { DemoMode.scale(amount, account.debt_symbol) } %>
 <section class="space-y-3 rounded-xl border border-line bg-surface px-4 py-4">
     <div class="flex items-baseline justify-between gap-3">
         <h2 class="text-sm font-semibold uppercase tracking-widest text-muted">Loan</h2>
@@ -10,11 +17,11 @@
     <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm md:grid-cols-4">
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Owed</dt>
-            <dd class="font-semibold text-loss"><%= number_to_currency(loan.balance) %></dd>
+            <dd class="font-semibold text-loss"><%= number_to_currency(dollars.(loan.balance)) %></dd>
         </div>
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Monthly payment</dt>
-            <dd class="font-semibold"><%= number_to_currency(loan.monthly_payment) %></dd>
+            <dd class="font-semibold"><%= number_to_currency(dollars.(loan.monthly_payment)) %></dd>
         </div>
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Rate</dt>
@@ -22,7 +29,7 @@
         </div>
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Borrowed</dt>
-            <dd><%= number_to_currency(loan.principal) %></dd>
+            <dd><%= number_to_currency(dollars.(loan.principal)) %></dd>
         </div>
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Payments made</dt>
@@ -38,7 +45,7 @@
         </div>
         <div>
             <dt class="text-xs uppercase tracking-wide text-muted">Interest over term</dt>
-            <dd><%= number_to_currency(loan.total_interest) %></dd>
+            <dd><%= number_to_currency(dollars.(loan.total_interest)) %></dd>
         </div>
     </dl>
 

@@ -27,9 +27,20 @@
               <%= nav_tab destination[:title], destination[:path], destination[:active] %>
             <% end %>
           </nav>
-          <%= button_to logout_path, method: :delete, class: "btn btn-secondary btn-sm" do %>
-            Log out
-          <% end %>
+          <div class="flex items-center gap-2">
+            <%# Nothing to toggle when the environment has pinned demo mode on for
+                the whole deployment — then it's a label, not a switch. %>
+            <% if DemoMode.forced? %>
+              <span class="btn btn-primary btn-sm cursor-default" title="DEMO_MODE is set for this deployment">Demo</span>
+            <% else %>
+              <%= button_to "Demo", demo_path,
+                    class: "btn btn-sm #{demo_mode? ? "btn-primary" : "btn-secondary"}",
+                    title: demo_mode? ? "Showing a fraction of what's held" : "Show holdings at a fraction of what's held" %>
+            <% end %>
+            <%= button_to logout_path, method: :delete, class: "btn btn-secondary btn-sm" do %>
+              Log out
+            <% end %>
+          </div>
         <% end %>
       </div>
     </header>

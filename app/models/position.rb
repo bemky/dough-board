@@ -47,6 +47,11 @@ class Position < ApplicationRecord
     end
 
     holdings.values.each do |holding|
+      # Demo mode is a fraction of every holding, applied here so the treemap,
+      # the account totals and the portfolio total are all a fraction of the
+      # same thing. Off — which is everywhere but a request that asked for it —
+      # this returns the units untouched.
+      holding[:units] = DemoMode.scale(holding[:units], holding[:symbol])
       # asset.cached_price is nil when there's no <24h-old quote on hand (a
       # delisted or unknown symbol, or one simply not fetched recently). Prefer
       # it over the broker's price so the value shown matches what the page's
