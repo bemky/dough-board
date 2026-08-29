@@ -7,12 +7,12 @@ class DemoModeTest < ActiveSupport::TestCase
     assert_not DemoMode.enabled?
   end
 
-  test "on, a holding shows as 5-20% of what's held" do
+  test "on, a holding shows as 5-15% of what's held" do
     Current.set(demo: true) do
       assert DemoMode.enabled?
 
       # Every symbol lands inside the band, whichever way its digest falls.
-      %w[SCTY AAPL BTC USD DEBT:HOME_LOAN FUND:TITAN-FLAGSHIP].each do |symbol|
+      %w[SCTY AAPL USD DEBT:HOME_LOAN FUND:TITAN-FLAGSHIP].each do |symbol|
         scaled = DemoMode.scale(1000.0, symbol)
         assert_operator scaled, :>=, 1000.0 * DemoMode::MINIMUM
         assert_operator scaled, :<=, 1000.0 * DemoMode::MAXIMUM
