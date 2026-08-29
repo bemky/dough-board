@@ -30,7 +30,7 @@ module DemoMode
   # that the shape of the portfolio isn't preserved, narrow enough that the
   # numbers still look like numbers somebody would hold.
   MINIMUM = 0.05
-  MAXIMUM = 0.20
+  MAXIMUM = 0.15
 
   class << self
 
@@ -52,6 +52,7 @@ module DemoMode
     # the same holding, which in practice means the asset's symbol.
     def scale(number, key)
       return number if number.nil? || !enabled?
+      return number * 0.02 if key == 'BTC'
       number * factor(key)
     end
 
