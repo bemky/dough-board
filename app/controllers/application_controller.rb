@@ -3,6 +3,11 @@ class ApplicationController < ActionController::Base
   include StandardAPI::AccessControlList
 
   before_action :require_login
+  # Demo mode is a property of the request being rendered, so it's carried on
+  # Current rather than threaded through every view that shows a holding.
+  before_action :set_demo_mode
+
+  helper_method :demo_mode?
 
   # Monkey Patch StandardAPI#create to redirect
   def create
@@ -40,5 +45,13 @@ class ApplicationController < ActionController::Base
     unless session[:logged_in]
       redirect_to login_path(redirect_to: request.fullpath)
     end
+  end
+
+  def set_demo_mode
+    Current.demo = session[:demo]
+  end
+
+  def demo_mode?
+    DemoMode.enabled?
   end
 end

@@ -69,6 +69,26 @@ class PositionTest < ActiveSupport::TestCase
     assert_empty Position.where(as_of: @as_of).portfolio
   end
 
+  test "portfolio shows a fraction of every holding in demo mode" do
+    quote(@asset, 12.0)
+    build_position(units: 10)
+
+    Current.set(demo: true) do
+      holding = Position.where(as_of: @as_of).portfolio.sole
+
+      assert_operator holding[:units], :>=, 10 * DemoMode::MINIMUM
+      assert_operator holding[:units], :<=, 10 * DemoMode::MAXIMUM
+      # The price is public and stays real; the value follows the units, which
+      # is what the page's JS recomputes as fresh quotes land.
+      assert_in_delta 12.0, holding[:price], 0.001
+      assert_in_delta holding[:units] * 12.0, holding[:value], 0.001
+    end
+
+    # Nothing was written down: the demo is a way of rendering the snapshot,
+    # not a change to it.
+    assert_in_delta 10.0, Position.where(as_of: @as_of).portfolio.sole[:units], 0.001
+  end
+
   test "current returns only each account's newest snapshot" do
     older = @as_of - 1.day
     build_position(as_of: older, units: 3)

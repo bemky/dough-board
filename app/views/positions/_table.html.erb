@@ -26,15 +26,20 @@
     </thead>
     <tbody>
     <% positions.each do |position| %>
+        <%# Demo mode scales what's held, not what it's worth apiece — see
+            app/lib/demo_mode.rb. Off, these are the position's own figures. %>
+        <% units = DemoMode.scale(position.units, position.asset.symbol) %>
+        <% value = DemoMode.scale(position.value, position.asset.symbol) %>
+        <% cost_basis = DemoMode.scale(position.cost_basis, position.asset.symbol) %>
         <tr>
             <td class="cell-primary"><%= position.asset.symbol %></td>
             <% if show_account %>
                 <td class="cell-caption"><%= link_to position.account.label, position.account, class: "hover:underline" %></td>
             <% end %>
-            <td class="cell-secondary" data-label="Units"><%= position.units.round(4) %></td>
+            <td class="cell-secondary" data-label="Units"><%= units.round(4) %></td>
             <td class="cell-meta"
                 data-quote-symbol="<%= position.asset.symbol %>"
-                data-quantity="<%= position.units %>">
+                data-quantity="<%= units %>">
                 <% if position.price %>
                     <span data-quote-price><%= number_to_currency position.price %></span>
                 <% else %>
@@ -42,10 +47,10 @@
                 <% end %>
             </td>
             <td class="cell-amount" data-quote-value>
-                <%= position.value ? number_to_currency(position.value) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
+                <%= value ? number_to_currency(value) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
             </td>
             <td class="cell-detail-amount" data-label="Cost">
-                <%= position.cost_basis ? number_to_currency(position.cost_basis) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
+                <%= cost_basis ? number_to_currency(cost_basis) : content_tag(:span, "&mdash;".html_safe, class: "text-muted") %>
             </td>
             <td class="cell-action">
                 <%# A derived account's snapshot is rewritten on every run, so an edit

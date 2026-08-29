@@ -65,6 +65,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "dd", text: "$1,798.65"
   end
 
+  test "a demo scales the terms too, so the mortgage isn't on the page beside them" do
+    account = Account.create!(institution_name: "Rocket", name: "Mortgage",
+      positions_source: "amortized", loan_terms: TERMS.stringify_keys)
+
+    post demo_path
+    get account_path(account)
+
+    assert_response :success
+    assert_select "dd", text: "$1,798.65", count: 0
+    assert_select "dd", text: "$300,000.00", count: 0
+    # The rate is not a quantity, and a demo that changed it would be a demo of
+    # a different loan.
+    assert_select "dd", text: "6%"
+  end
+
   test "index values accounts from their current positions" do
     get accounts_path
     assert_response :success

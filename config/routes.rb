@@ -11,6 +11,9 @@ Rails.application.routes.draw do
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
+  # Shows the app without showing what's in it; see app/lib/demo_mode.rb.
+  post "demo", to: "demo#update", as: :demo
+
   # Sidekiq's dashboard: queue depth, retries, and what the workers are doing.
   # It's a Rack app, so ApplicationController's require_login never runs for it
   # — LoggedInConstraint is that check. Referenced through a lambda so the
